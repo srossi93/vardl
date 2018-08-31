@@ -141,11 +141,47 @@ class Gaussian2DDistribution(BaseDistribution):
             return w_sample
 
         elif self.approx == 'full':
-            pass
+            w_sample = torch.zeros_like(epsilon_for_W_sample)
+
+            for i in range(self.m):
+                cov_lower_triangular = torch.tril(self.cov_lower_triangular[i, :, :], -1)
+                L_chol = cov_lower_triangular + torch.diagflat(torch.exp(self.logvars[i]))
+                w_sample[:, :, i] = torch.add(torch.matmul(L_chol, epsilon_for_W_sample[:, :, i].t()).t(),
+                                              self.mean[:, i])
+
+            return w_sample
+
         elif self.approx == 'low-rank':
             pass
 
         return None
+
+    def sample_local_repr(self, n_sample: int, in_data: torch.Tensor) -> torch.Tensor:
+        # For stochastic gradient optimization, high variance in the gradient
+        # will fail to make much progress in a reasonable amount of time
+        # To avoid this issue, we use local reparameterization
+        # ref. Variational Dropout and the Local Reparameterization Trick
+        #
+        # Instead of sampling W and than computing Y=WX, we directly compute Y,
+        # giving the fact that for a Gaussian posterior on the weights W, also the
+        # posterior on the outputs Y conditional to the inputs X is factorized
+        # Gaussian as well
+        epsilon_for_Y_sample = torch.randn(n_sample, in_data.size(-2), self.mean.size(1),
+                                           dtype=self.dtype,
+                                           device=self.device,
+                                           requires_grad=False)
+
+        mean_Y = torch.matmul(in_data, self.mean)
+
+        if self.approx == 'factorized':
+            var_Y = torch.matmul(in_data.pow(2), torch.exp(self.logvars))
+            Y = mean_Y + torch.sqrt(var_Y + 1e-5) * epsilon_for_Y_sample
+
+        if self.approx == 'full':
+            pass
+        if self.approx == 'low-rank':
+            pass
+        return Y
 
 
 
