@@ -29,12 +29,15 @@ class Gaussian2DDistributionTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.n = 1
-        cls.m = 1
+        cls.n = 10
+        cls.m = 6
         cls.approx = 'factorized'
         cls.dtype = torch.float32
         cls.device = torch.device('cpu')
-        cls.distr = Gaussian2DDistribution(cls.n, cls.m, cls.approx, cls.dtype, cls.device)
+        cls.distr = Gaussian2DDistribution(cls.n, cls.m, cls.approx,
+                                           cls.dtype, cls.device)
+        cls.distr2 = Gaussian2DDistribution(1, 1, cls.approx,
+                                            cls.dtype, cls.device)
 
     def test_member_n(self):
         self.assertTrue(self.distr.n == self.n)
@@ -51,14 +54,13 @@ class Gaussian2DDistributionTest(unittest.TestCase):
     def test_member_device(self):
         self.assertTrue(self.distr.device == self.device)
 
-
     def test_sample_mean(self):
-        sample_mean = self.distr.sample(10000000).mean(dim=0)
-        self.assertAlmostEqual(self.distr.mean, sample_mean, delta=1e-3)
+        sample_mean = self.distr2.sample(10000000).mean(dim=0)
+        self.assertAlmostEqual(self.distr2.mean, sample_mean, delta=1e-3)
 
     def test_sample_variance(self):
-        sample_var = self.distr.sample(10000000).var()
-        self.assertAlmostEqual(self.distr.logvars.exp(), sample_var, delta=1e-3)
+        sample_var = self.distr2.sample(10000000).var()
+        self.assertAlmostEqual(self.distr2.logvars.exp(), sample_var, delta=1e-3)
 
     def test_optimization_true(self):
         self.distr.optimize(True)
@@ -69,6 +71,18 @@ class Gaussian2DDistributionTest(unittest.TestCase):
         self.distr.optimize(False)
         for param in self.distr.parameters():
             self.assertFalse(param.requires_grad)
+
+    def test_mean_set(self):
+        new_mean = torch.ones(self.n, self.m)
+        self.distr.mean = new_mean
+        error = torch.sum(self.distr.mean - new_mean)
+        self.assertEqual(error, 0)
+
+    def test_logvars_set(self):
+        new_logvars = torch.ones(self.n, self.m)
+        self.distr.logvars = new_logvars
+        error = torch.sum(torch.abs(self.distr.logvars - new_logvars))
+        self.assertEqual(error, 0)
 
 if __name__ == '__main__':
     unittest.main()

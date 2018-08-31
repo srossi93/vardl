@@ -52,14 +52,14 @@ class Gaussian2DDistribution(BaseDistribution):
         self.dtype = dtype
 
 
-        self.mean = nn.Parameter(
+        self._mean = nn.Parameter(
             torch.zeros(self.n, self.m,
                         dtype=self.dtype,
                         device=self.device),
             requires_grad=False)
 
 
-        self.logvars = nn.Parameter(
+        self._logvars = nn.Parameter(
             np.log(1. / self.n) * torch.ones(self.n, self.m,
                                              dtype=dtype,
                                              device=self.device),
@@ -69,7 +69,7 @@ class Gaussian2DDistribution(BaseDistribution):
             # -- The posterior approximation of the covariance matrix is
             # -- parametrized using Log-Cholesky parametrization
             # -- ref. Unconstrained Parameterizations for Variance-Covariance Matrices (p.2)
-            self.cov_lower_triangular = nn.Parameter(
+            self._cov_lower_triangular = nn.Parameter(
                 np.log(1. / self.n) *
                 torch.eye(self.n, self.n,
                           dtype=self.dtype,
@@ -83,13 +83,45 @@ class Gaussian2DDistribution(BaseDistribution):
             raise NotImplementedError('')
             rank = 10
 
-            self.q_W_low_rank = nn.Parameter(torch.zeros(self.n, rank,
+            self._cov_low_rank = nn.Parameter(torch.zeros(self.n, rank,
                                                       dtype=self.dtype,
                                                       device=self.device) *
-                                             torch.ones(self.m, 1, 1,
+                                              torch.ones(self.m, 1, 1,
                                                      dtype=self.dtype,
                                                      device=self.device),
-                                             requires_grad=False)
+                                              requires_grad=False)
+    @property
+    def mean(self):
+        return self._mean
+
+    @mean.setter
+    def mean(self, value: torch.Tensor):
+        self._mean.data = value
+
+    @property
+    def logvars(self):
+        return self._logvars
+
+    @logvars.setter
+    def logvars(self, value: torch.Tensor):
+        self._logvars.data = value
+
+    @property
+    def cov_lower_triangular(self):
+        return self._cov_lower_triangular
+
+    @cov_lower_triangular.setter
+    def cov_lower_triangular(self, value: torch.Tensor):
+        self.cov_lower_triangular.data = value
+
+    @property
+    def cov_low_rank(self):
+        return self.cov_low_rank
+
+    @cov_low_rank.setter
+    def cov_low_rank(self, value: torch.Tensor):
+        self._cov_low_rank.data = value
+
 
     def optimize(self, train: bool = True):
         for param in self.parameters():
