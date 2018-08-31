@@ -17,6 +17,7 @@
 # Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
 import torch
+import torch.nn as nn
 import numpy as np
 
 from . import BaseLikelihood
@@ -24,20 +25,26 @@ from . import BaseLikelihood
 
 class Gaussian(BaseLikelihood):
 
-    def __init__(self, model: torch.nn.Module):
-        self.model = model
-        self.device = model.device
-        self.log_2_pi_torch = torch.ones(1, device=self.device) * np.log(2.0 * np.pi)
+    def __init__(self):#, model: torch.nn.Module):
+        super(Gaussian, self).__init__()
+        self.log_noise_var = nn.Parameter(torch.ones(1, dtype=self.dtype) * -2.0,
+                                          requires_grad=True)
+        self.log_2_pi_torch = torch.ones(1) * np.log(2.0 * np.pi)
+
+        return
+       # self.model = model
+       # self.device = model.device
+       # self.log_2_pi_torch = torch.ones(1, device=self.device) * np.log(2.0 * np.pi)
 
     def log_cond_prob(self, output: torch.Tensor,
                       latent_val: torch.Tensor) -> torch.Tensor:
 
-        log_noise_var = self.model.log_theta_noise_var
+        log_noise_var = self.log_noise_var
         return - 0.5 * (self.log_2_pi_torch + log_noise_var +
                         torch.pow(output - latent_val, 2) * torch.exp(-log_noise_var))
 
     def get_params(self):
-        return self.model.log_theta_noise_var
+        return self.log_theta_noise_var
 
     def predict(self, latent_val: torch.Tensor) -> torch.Tensor:
         return torch.mean(latent_val, dim=0), torch.std(latent_val, dim=0)

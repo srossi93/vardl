@@ -18,12 +18,13 @@
 
 import abc
 import torch
+import torch.nn as nn
 
+class BaseLikelihood(nn.Module):
 
-class BaseLikelihood:
-    __metaclass__ = abc.ABCMeta
+    def __init__(self):
+        super(BaseLikelihood, self).__init__()
 
-    @abc.abstractmethod
     def log_cond_prob(self, output: torch.Tensor,
                       latent_val: torch.Tensor) -> torch.Tensor:
         """
@@ -35,10 +36,8 @@ class BaseLikelihood:
         """
         raise NotImplementedError("Subclass should implement this.")
 
-    @abc.abstractmethod
     def get_params(self):
         raise NotImplementedError("Subclass should implement this.")
 
-    @abc.abstractmethod
     def predict(self, latent_val: torch.Tensor):
         raise NotImplementedError("Subclass should implement this.")

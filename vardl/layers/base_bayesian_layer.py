@@ -13,10 +13,38 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-# Original code by Karl Krauth
-# Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
-from .logsumexp import logsumexp  # noqa: F401
-from .set_seed import set_seed  # noqa: F401
+
+import abc
+import torch
+import torch.nn as nn
+
+
+class BaseBayesianLayer(nn.Module):
+
+    def __init__(self, nmc_train: int, nmc_test: int,
+                 dtype: str, device: torch.device):
+        super(BaseBayesianLayer, self).__init__()
+        self.nmc_train = nmc_train
+        self.nmc_test = nmc_test
+        self.dtype = dtype
+        self.device = device
+
+        pass
+
+    @property
+    def dkl(self) -> torch.Tensor:
+        raise NotImplementedError()
+
+    def forward(self, *input):
+        raise NotImplementedError()
+
+
+    def train(self, mode=True):
+        self.nmc = self.nmc_train if mode else self.nmc_test
+
+
+
+
 
 

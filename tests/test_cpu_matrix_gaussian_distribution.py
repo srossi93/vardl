@@ -20,7 +20,7 @@ sys.path.insert(0, '.')
 import unittest  # noqa: E402
 import torch
 import vardl
-from vardl.distributions import Gaussian2DDistribution
+from vardl.distributions import MatrixGaussianDistribution
 
 class Gaussian2DDistributionTest(unittest.TestCase):
     @classmethod
@@ -34,10 +34,10 @@ class Gaussian2DDistributionTest(unittest.TestCase):
         cls.approx = 'factorized'
         cls.dtype = torch.float32
         cls.device = torch.device('cpu')
-        cls.distr = Gaussian2DDistribution(cls.n, cls.m, cls.approx,
-                                           cls.dtype, cls.device)
-        cls.distr2 = Gaussian2DDistribution(1, 1, cls.approx,
-                                            cls.dtype, cls.device)
+        cls.distr = MatrixGaussianDistribution(cls.n, cls.m, cls.approx,
+                                               cls.dtype, cls.device)
+        cls.distr2 = MatrixGaussianDistribution(1, 1, cls.approx,
+                                                cls.dtype, cls.device)
 
     def test_member_n(self):
         self.assertTrue(self.distr.n == self.n)

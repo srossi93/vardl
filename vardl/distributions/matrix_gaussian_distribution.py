@@ -22,7 +22,7 @@ import numpy as np
 from . import BaseDistribution
 
 
-class Gaussian2DDistribution(BaseDistribution):
+class MatrixGaussianDistribution(BaseDistribution):
 
     def __init__(self, n: int, m: int, approx: str,
                  dtype: torch.dtype, device: torch.device):
@@ -36,7 +36,7 @@ class Gaussian2DDistribution(BaseDistribution):
             device (torch.device): Device (cpu/cuda)
         """
 
-        super(Gaussian2DDistribution, self).__init__()
+        super(MatrixGaussianDistribution, self).__init__()
 
         if n <= 0:
             raise ValueError("N should be positive")

@@ -15,4 +15,5 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .base_distribution import  BaseDistribution
-from .gaussian_distribution import Gaussian2DDistribution
+from .matrix_gaussian_distribution import MatrixGaussianDistribution
+from .dkl import dkl_matrix_gaussian

@@ -19,7 +19,7 @@
 import torch
 import random
 import numpy as np
-import tensorflow as tf
+#import tensorflow as tf
 import torch.backends.cudnn
 
 # Log-sum operation
@@ -30,5 +30,5 @@ def set_seed(seed: int):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = True
-    tf.set_random_seed(seed)
+    #tf.set_random_seed(seed)
 

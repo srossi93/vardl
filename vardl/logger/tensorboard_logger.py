@@ -13,10 +13,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-# Original code by Karl Krauth
-# Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
-
-from .logsumexp import logsumexp  # noqa: F401
-from .set_seed import set_seed  # noqa: F401
-
-
