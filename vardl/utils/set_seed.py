@@ -1,5 +1,5 @@
 # Copyright (C) 2018   Simone Rossi <simone.rossi@eurecom.fr>
-# 	  	       Maurizio Filippone <maurizio.filippone@eurecom.fr>
+#              Maurizio Filippone <maurizio.filippone@eurecom.fr>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,5 +16,19 @@
 # Original code by Karl Krauth
 # Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
-from .logsumexp import logsumexp  # noqa: F401
-from .set_seed import set_seed  # noqa: F401
+import torch
+import random
+import numpy as np
+import tensorflow as tf
+import torch.backends.cudnn
+
+# Log-sum operation
+def set_seed(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+    tf.set_random_seed(seed)
+

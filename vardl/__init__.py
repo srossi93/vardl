@@ -21,3 +21,4 @@ import vardl.logger   # noqa: F401
 import vardl.models  # noqa: F401
 import vardl.trainer  # noqa: F401
 import vardl.utils  # noqa: F401
+import vardl.distributions  # noqa: F401

@@ -19,69 +19,56 @@ sys.path.insert(0, '.')
 
 import unittest  # noqa: E402
 import torch
+import vardl
 from vardl.distributions import Gaussian2DDistribution
 
 class Gaussian2DDistributionTest(unittest.TestCase):
+    @classmethod
+    def setUp(self):
+        vardl.utils.set_seed(0)
 
-
+    @classmethod
+    def setUpClass(cls):
+        cls.n = 1
+        cls.m = 1
+        cls.approx = 'factorized'
+        cls.dtype = torch.float32
+        cls.device = torch.device('cpu')
+        cls.distr = Gaussian2DDistribution(cls.n, cls.m, cls.approx, cls.dtype, cls.device)
 
     def test_member_n(self):
-        n = 10
-        m = 5
-        approx = 'factorized'
-        dtype = torch.float32
-        device = torch.device('cpu')
-        distr = Gaussian2DDistribution(n, m, approx, dtype, device)
-        self.assertTrue(distr.n == n)
+        self.assertTrue(self.distr.n == self.n)
 
     def test_member_m(self):
-        n = 10
-        m = 5
-        approx = 'factorized'
-        dtype = torch.float32
-        device = torch.device('cpu')
-        distr = Gaussian2DDistribution(n, m, approx, dtype, device)
-        self.assertTrue(distr.m == m)
+        self.assertTrue(self.distr.m == self.m)
 
     def test_member_approx(self):
-        n = 10
-        m = 5
-        approx = 'factorized'
-        dtype = torch.float32
-        device = torch.device('cpu')
-        distr = Gaussian2DDistribution(n, m, approx, dtype, device)
-        self.assertTrue(distr.approx == approx)
+        self.assertTrue(self.distr.approx == self.approx)
 
     def test_member_dtype(self):
-        n = 10
-        m = 5
-        approx = 'factorized'
-        dtype = torch.float32
-        device = torch.device('cpu')
-        distr = Gaussian2DDistribution(n, m, approx, dtype, device)
-        self.assertTrue(distr.dtype == dtype)
+        self.assertTrue(self.distr.dtype == self.dtype)
 
     def test_member_device(self):
-        n = 10
-        m = 5
-        approx = 'factorized'
-        dtype = torch.float32
-        device = torch.device('cpu')
-        distr = Gaussian2DDistribution(n, m, approx, dtype, device)
-        self.assertTrue(distr.device == device)
+        self.assertTrue(self.distr.device == self.device)
 
 
     def test_sample_mean(self):
-        n = 1
-        m = 1
-        approx = 'factorized'
-        dtype = torch.float32
-        device = torch.device('cpu')
-        distr = Gaussian2DDistribution(n, m, approx, dtype, device)
+        sample_mean = self.distr.sample(10000000).mean(dim=0)
+        self.assertAlmostEqual(self.distr.mean, sample_mean, delta=1e-3)
 
-        sample_mean = distr.sample(10000000).mean()
-        self.assertAlmostEqual(0, sample_mean.numpy(), delta=1e-3)
+    def test_sample_variance(self):
+        sample_var = self.distr.sample(10000000).var()
+        self.assertAlmostEqual(self.distr.logvars.exp(), sample_var, delta=1e-3)
 
+    def test_optimization_true(self):
+        self.distr.optimize(True)
+        for param in self.distr.parameters():
+            self.assertTrue(param.requires_grad)
+
+    def test_optimization_false(self):
+        self.distr.optimize(False)
+        for param in self.distr.parameters():
+            self.assertFalse(param.requires_grad)
 
 if __name__ == '__main__':
     unittest.main()
