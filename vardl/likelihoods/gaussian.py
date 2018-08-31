@@ -25,8 +25,9 @@ from . import BaseLikelihood
 
 class Gaussian(BaseLikelihood):
 
-    def __init__(self):#, model: torch.nn.Module):
+    def __init__(self, dtype:torch.dtype):#, model: torch.nn.Module):
         super(Gaussian, self).__init__()
+        self.dtype = dtype
         self.log_noise_var = nn.Parameter(torch.ones(1, dtype=self.dtype) * -2.0,
                                           requires_grad=True)
         self.log_2_pi_torch = torch.ones(1) * np.log(2.0 * np.pi)

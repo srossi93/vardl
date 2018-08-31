@@ -20,29 +20,17 @@ import torch.nn as nn
 
 from ..layers import BayesianLinear
 from ..likelihoods import Gaussian
+from . import BaseBayesianNet
 
+class RegrBayesianNet(BaseBayesianNet):
 
-class RegrBayesianNet(nn.Module):
-
-    def __init__(self, architecure:nn.Sequential):
+    def __init__(self, architecure:nn.Sequential, dtype:torch.dtype):
         super(RegrBayesianNet, self).__init__()
 
+        self.dtype = dtype
         self.architecture = architecure
-        self.likelihood = Gaussian()
-
-    @property
-    def dkl(self):
-        total_dkl = torch.zeros(1)
-        for layer in self.architecture:
-            total_dkl += layer.dkl if type(layer) == BayesianLinear else 0
-        return total_dkl
-
+        self.likelihood = Gaussian(dtype)
 
     def forward(self, input):
         return self.architecture(input)
-
-
-
-
-
 

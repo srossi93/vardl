@@ -59,6 +59,7 @@ class BayesianLinear(BaseBayesianLayer):
                                                         approx=self.approx,
                                                         dtype=self.dtype,
                                                         device=self.device)
+        self.q_posterior_W.optimize(True)
 
         # -- Scaling factor for weights
         #self.log_scaling_factor = 1 * Parameter(torch.zeros(1, dtype=dtype), requires_grad=True)

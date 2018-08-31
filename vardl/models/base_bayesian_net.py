@@ -15,5 +15,23 @@ r"""
 
 """
 
-from .base_bayesian_net import BaseBayesianNet
-from .regr_bayesian_net import RegrBayesianNet
+import torch
+import torch.nn as nn
+
+from ..layers import BayesianLinear
+from ..likelihoods import Gaussian
+
+
+class BaseBayesianNet(nn.Module):
+
+    def __init__(self):
+        super(BaseBayesianNet, self).__init__()
+
+
+    @property
+    def dkl(self):
+        total_dkl = torch.zeros(1)
+        for layer in self.architecture:
+            total_dkl += layer.dkl if type(layer) == BayesianLinear else 0
+        return total_dkl
+
