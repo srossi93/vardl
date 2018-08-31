@@ -16,12 +16,24 @@
 
 
 import abc
-import torch
-
 
 class BaseLogger:
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def __int__(self, filename: str):
+        self.filename = filename
         raise NotImplementedError("Subclass should implement this.")
+
+    @abc.abstractmethod
+    def scalar_summary(self, tag, value, step):
+        raise NotImplementedError("Subclass should implement this.")
+
+    @abc.abstractmethod
+    def image_summary(self, tag, images, step):
+        raise NotImplementedError("Subclass should implement this.")
+
+    @abc.abstractmethod
+    def histo_summary(self, tag, values, step, bins=1000):
+        raise NotImplementedError("Subclass should implement this.")
+

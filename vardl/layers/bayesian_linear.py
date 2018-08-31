@@ -22,21 +22,17 @@ from . import BaseBayesianLayer
 
 
 class BayesianLinear(BaseBayesianLayer):
-    r"""
-        This module implements Bayesian Linear Layer with Stochastic
-        Variational Inference.
-    """
 
     def __init__(self,
                  in_features: int,
                  out_features: int,
                  bias: bool = False,
-                 approx:str = 'factorized',
-                 local_reparameterization:bool = False,
-                 nmc_train:int = 10,
-                 nmc_test:int = 10,
-                 dtype:torch.device = torch.float32,
-                 device:torch.device = torch.device('cpu')):
+                 approx: str = 'factorized',
+                 local_reparameterization: bool = False,
+                 nmc_train: int = 10,
+                 nmc_test: int = 10,
+                 dtype: torch.device = torch.float32,
+                 device: torch.device = torch.device('cpu')):
 
         super(BayesianLinear, self).__init__(nmc_train=nmc_train,
                                              nmc_test=nmc_test,

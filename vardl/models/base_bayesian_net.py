@@ -26,6 +26,8 @@ class BaseBayesianNet(nn.Module):
 
     def __init__(self):
         super(BaseBayesianNet, self).__init__()
+        self.architecture = None
+        self.likelihood = None
 
 
     @property
