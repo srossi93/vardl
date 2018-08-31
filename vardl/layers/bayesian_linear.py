@@ -77,7 +77,7 @@ class BayesianLinear(BaseBayesianLayer):
             self.register_parameter('q_b_m', None)
             self.register_parameter('q_b_logv', None)
 
-        dkl = self.dkl
+        #dkl = self.dkl
         self.train()
 
 

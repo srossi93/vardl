@@ -32,7 +32,7 @@ class BaseBayesianNet(nn.Module):
 
     @property
     def dkl(self):
-        total_dkl = torch.zeros(1)
+        total_dkl = 0
         for layer in self.architecture:
             total_dkl += layer.dkl if type(layer) == BayesianLinear else 0
         return total_dkl

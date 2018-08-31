@@ -60,9 +60,9 @@ class MatrixGaussianDistribution(BaseDistribution):
 
 
         self._logvars = nn.Parameter(
-            np.log(1. / self.n) * torch.ones(self.n, self.m,
+            torch.ones(self.n, self.m,   #
                                              dtype=dtype,
-                                             device=self.device),
+                                             device=self.device) * np.log(1. / self.n),
             requires_grad=False)
 
         if self.approx == 'full':

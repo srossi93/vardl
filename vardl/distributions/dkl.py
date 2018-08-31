@@ -40,6 +40,10 @@ def _DKL_gaussian_q_diag_p_diag(mq, log_vq, mp, log_vp):
     :param log_vp: vector of log-variances for p
     :return: KL divergence between q and p
     """
+    #print(mq.is_cuda)
+    #print(mp.is_cuda)
+    #print(log_vq.is_cuda)
+    #print(log_vp.is_cuda)
 
     return 0.5 * torch.sum(
         log_vp - log_vq + (torch.pow(mq - mp, 2) * torch.exp(-log_vp)) + torch.exp(log_vq - log_vp) - 1.0)

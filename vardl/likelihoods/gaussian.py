@@ -41,7 +41,7 @@ class Gaussian(BaseLikelihood):
                       latent_val: torch.Tensor) -> torch.Tensor:
 
         log_noise_var = self.log_noise_var
-        return - 0.5 * (self.log_2_pi_torch + log_noise_var +
+        return - 0.5 * (log_noise_var + #self.log_2_pi_torch +
                         torch.pow(output - latent_val, 2) * torch.exp(-log_noise_var))
 
     def get_params(self):
