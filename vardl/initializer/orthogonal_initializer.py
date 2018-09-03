@@ -23,12 +23,11 @@ from torch.utils.data import DataLoader
 from . import BaseInitializer
 from ..layers import BayesianLinear
 
+
 class OrthogonalInitializer(BaseInitializer):
 
     def __init__(self, model, ):
         super(OrthogonalInitializer, self).__init__(model)
-
-
 
     def _initialize_layer(self, layer: BayesianLinear):
 
@@ -36,10 +35,12 @@ class OrthogonalInitializer(BaseInitializer):
 
         if layer.q_posterior_W.approx == 'factorized':
             var = (2. * torch.ones(1)) / (layer.in_features)
-            layer.q_posterior_W.logvars = (np.log(var) * torch.ones_like(layer.q_posterior_W.logvars))
+            layer.q_posterior_W.logvars = (
+                np.log(var) *
+                torch.ones_like(
+                    layer.q_posterior_W.logvars))
 
         elif layer.approx == 'full':
             raise NotImplementedError()
         else:
             raise NotImplementedError()
-

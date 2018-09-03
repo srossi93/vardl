@@ -32,15 +32,15 @@ class HeuristicInitializer(BaseInitializer):
         layer.q_posterior_W.mean = torch.zeros_like(layer.q_posterior_W.mean)
 
         if layer.q_posterior_W.approx == 'factorized':
-            layer.q_posterior_W.logvars = torch.ones_like(layer.q_posterior_W.logvars) * 2 * np.log(stdv)
+            layer.q_posterior_W.logvars = torch.ones_like(
+                layer.q_posterior_W.logvars) * 2 * np.log(stdv)
         elif layer.approx == 'full':
             layer.q_posterior_W.logvars = np.log(1. / layer.in_features) * torch.ones(layer.out_features,
                                                                                       layer.in_features)
 
             layer.q_posterior_W.cov_lower_triangular = np.log(1. / layer.in_features) * torch.eye(layer.in_features,
                                                                                                   layer.in_features) *\
-                                                       torch.ones(layer.out_features, 1, 1)
+                torch.ones(layer.out_features, 1, 1)
 
         else:
             raise NotImplementedError()
-

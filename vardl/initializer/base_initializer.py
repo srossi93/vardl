@@ -26,7 +26,7 @@ class BaseInitializer():
 
     def _layers_to_initialize(self):
         for i, layer in enumerate(self.model.architecture):
-            if type(layer) is BayesianLinear:
+            if isinstance(layer, BayesianLinear):
                 self.layers.append((i, layer))
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int=None):

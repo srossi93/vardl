@@ -14,6 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .base_distribution import  BaseDistribution
+from .base_distribution import BaseDistribution
 from .matrix_gaussian_distribution import MatrixGaussianDistribution
 from .dkl import dkl_matrix_gaussian

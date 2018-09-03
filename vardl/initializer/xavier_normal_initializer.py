@@ -32,9 +32,11 @@ class XavierNormalInitializer(BaseInitializer):
 
         if layer.q_posterior_W.approx == 'factorized':
             var = (2. * torch.ones(1)) / (layer.in_features + layer.out_features)
-            layer.q_posterior_W.logvars = (np.log(var) * torch.ones_like(layer.q_posterior_W.logvars))
+            layer.q_posterior_W.logvars = (
+                np.log(var) *
+                torch.ones_like(
+                    layer.q_posterior_W.logvars))
         elif layer.approx == 'full':
             raise NotImplementedError()
         else:
             raise NotImplementedError()
-

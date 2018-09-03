@@ -29,11 +29,9 @@ class BaseBayesianNet(nn.Module):
         self.architecture = None
         self.likelihood = None
 
-
     @property
     def dkl(self):
         total_dkl = 0
         for layer in self.architecture:
-            total_dkl += layer.dkl if type(layer) == BayesianLinear else 0
+            total_dkl += layer.dkl if isinstance(layer, BayesianLinear) else 0
         return total_dkl
-

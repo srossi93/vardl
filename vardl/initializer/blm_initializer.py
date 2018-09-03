@@ -25,6 +25,7 @@ from . import BaseInitializer
 from ..layers import BayesianLinear
 from ..likelihoods import Softmax
 
+
 class BLMInitializer(BaseInitializer):
 
     def __init__(self, model, train_dataloader: DataLoader):
@@ -34,12 +35,11 @@ class BLMInitializer(BaseInitializer):
         self.lognoise = -2 * torch.ones(1)
         self.log_alpha = -4 * torch.ones(1)
 
-
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
         try:
             X, Y = next(self.train_dataloader_iterator)
-        except:
+        except BaseException:
             self.train_dataloader_iterator = iter(self.train_dataloader)
             X, Y = next(self.train_dataloader_iterator)
 
@@ -48,11 +48,12 @@ class BLMInitializer(BaseInitializer):
             if out_index % Y.size(1):
                 try:
                     X, Y = next(self.train_dataloader_iterator)
-                except:
+                except BaseException:
                     self.train_dataloader_iterator = iter(self.train_dataloader)
                     X, Y = next(self.train_dataloader_iterator)
 
-            if layer_index == len(self.model.architecture) - 1 and type(self.model.likelihood == Softmax):
+            if layer_index == len(self.model.architecture) - \
+                    1 and type(self.model.likelihood == Softmax):
                 # - If we are in the last layer and it is a classification problem,
                 # - the labels are transformed as Dirichlet variables
                 vv = torch.log(1.0 + 1.0 / (Y + torch.exp(self.log_alpha)))
@@ -94,7 +95,14 @@ def bayesian_linear_model(X, Y, log_noise):
 
     noise_var = torch.exp(log_noise * torch.ones(1))
 
-    W_true_post_cov = torch.inverse(torch.eye(X.size(1)) + torch.matmul(X.t(), torch.mul(noise_var.unsqueeze(1), X)))
+    W_true_post_cov = torch.inverse(
+        torch.eye(
+            X.size(1)) +
+        torch.matmul(
+            X.t(),
+            torch.mul(
+                noise_var.unsqueeze(1),
+                X)))
     W_true_post_mean = torch.matmul(torch.matmul(W_true_post_cov, X.t()), Y / noise_var)
 
     return W_true_post_mean, W_true_post_cov

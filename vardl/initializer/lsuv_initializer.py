@@ -24,15 +24,16 @@ from torch.utils.data import DataLoader
 from . import BaseInitializer
 from ..layers import BayesianLinear
 
+
 class LSUVInitializer(BaseInitializer):
 
-    def __init__(self, model, train_dataloader: DataLoader, tollerance: float, max_iter: int):
+    def __init__(self, model, train_dataloader: DataLoader,
+                 tollerance: float, max_iter: int):
         super(LSUVInitializer, self).__init__(model)
         self.train_dataloader = train_dataloader
         self.train_dataloader_iterator = iter(self.train_dataloader)
         self.tollerance = tollerance
         self.max_iter = max_iter
-
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
@@ -40,26 +41,32 @@ class LSUVInitializer(BaseInitializer):
 
         try:
             data, target = next(self.train_dataloader_iterator)
-        except:
+        except BaseException:
             self.train_dataloader_iterator = iter(self.train_dataloader)
             data, target = next(self.train_dataloader_iterator)
 
         last_idx = -len(list(self.model.architecture.children())) + layer_index + 1
 
-        layer_output = nn.Sequential(*list(self.model.architecture.children())[:last_idx])(data)
+        layer_output = nn.Sequential(
+            *
+            list(
+                self.model.architecture.children())[
+                :last_idx])(data)
 
         current_output_variance = layer_output.var()
 
         step = 0
 
-        while torch.abs(current_output_variance - 1.) > self.tollerance and step < self.max_iter:
+        while torch.abs(current_output_variance -
+                        1.) > self.tollerance and step < self.max_iter:
             step += 1
 
-            layer.q_posterior_W.mean = layer.q_posterior_W.mean / (torch.sqrt(current_output_variance))
+            layer.q_posterior_W.mean = layer.q_posterior_W.mean / \
+                (torch.sqrt(current_output_variance))
 
             try:
                 data, target = next(self.train_dataloader_iterator)
-            except:
+            except BaseException:
                 self.train_dataloader_iterator = iter(self.train_dataloader)
                 data, target = next(self.train_dataloader_iterator)
 
@@ -67,15 +74,17 @@ class LSUVInitializer(BaseInitializer):
                 *list(self.model.architecture.children())[:last_idx])(data)
             current_output_variance = layer_output.var()
 
-
-        print('INFO - Variance at layer %d (iter #%d): %.3f' % (layer_index, step, current_output_variance))
+        print('INFO - Variance at layer %d (iter #%d): %.3f' %
+              (layer_index, step, current_output_variance))
 
         if layer.q_posterior_W.approx == 'factorized':
             var = (2. * torch.ones(1)) / (layer.in_features)
-            layer.q_posterior_W.logvars = (np.log(var) * torch.ones_like(layer.q_posterior_W.logvars))
+            layer.q_posterior_W.logvars = (
+                np.log(var) *
+                torch.ones_like(
+                    layer.q_posterior_W.logvars))
 
         elif layer.approx == 'full':
             raise NotImplementedError()
         else:
             raise NotImplementedError()
-

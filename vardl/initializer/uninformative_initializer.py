@@ -23,12 +23,11 @@ from torch.utils.data import DataLoader
 from . import BaseInitializer
 from ..layers import BayesianLinear
 
+
 class UninformativeInitializer(BaseInitializer):
 
     def __init__(self, model, ):
         super(UninformativeInitializer, self).__init__(model)
-
-
 
     def _initialize_layer(self, layer: BayesianLinear):
 
@@ -41,4 +40,3 @@ class UninformativeInitializer(BaseInitializer):
             raise NotImplementedError()
         else:
             raise NotImplementedError()
-

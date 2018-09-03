@@ -60,13 +60,13 @@ class BayesianLinear(BaseBayesianLayer):
         # -- Scaling factor for weights
         #self.log_scaling_factor = 1 * Parameter(torch.zeros(1, dtype=dtype), requires_grad=True)
 
-
         if bias:
             self.bias = True
 
             # -- Prior on b
             self.prior_b_m = torch.zeros(out_features, dtype=dtype, requires_grad=False)
-            self.prior_b_logv = torch.zeros(out_features, dtype=dtype, requires_grad=False)
+            self.prior_b_logv = torch.zeros(
+                out_features, dtype=dtype, requires_grad=False)
 
             # -- Posterior approximation on b
             self.q_b_m = nn.Parameter(torch.zeros(out_features))
@@ -80,8 +80,6 @@ class BayesianLinear(BaseBayesianLayer):
         #dkl = self.dkl
         self.train()
 
-
-
     @property
     def dkl(self) -> torch.Tensor:
         total_dkl = dkl_matrix_gaussian(self.prior_W, self.q_posterior_W)
@@ -90,7 +88,6 @@ class BayesianLinear(BaseBayesianLayer):
             raise NotImplementedError()
 
         return total_dkl
-
 
     def forward(self, in_data):
         # Sample nmc times Wr ~ q(Wr | q_W_m, q_W_logv)
@@ -120,4 +117,3 @@ class BayesianLinear(BaseBayesianLayer):
         string = r"""in_features={}, out_features={}, bias={}, local_repr={}""".format(
             self.in_features, self.out_features, self.bias, self.local_reparameterization)
         return string
-

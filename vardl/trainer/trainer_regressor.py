@@ -25,6 +25,7 @@ from termcolor import colored
 from ..utils import set_seed
 from ..logger import BaseLogger
 
+
 class TrainerRegressor():
 
     def __init__(self,
@@ -55,16 +56,19 @@ class TrainerRegressor():
 
         set_seed(seed)
 
-    def compute_nell(self, Y_pred: torch.Tensor, Y_true: torch.Tensor, n: int, m: int) -> torch.Tensor:
-        nell = - n / m * torch.sum(torch.mean(self.model.likelihood.log_cond_prob(Y_true, Y_pred), 0))
+    def compute_nell(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
+                     n: int, m: int) -> torch.Tensor:
+        nell = - n / m * \
+            torch.sum(torch.mean(self.model.likelihood.log_cond_prob(Y_true, Y_pred), 0))
         return nell
 
-    def compute_loss(self, Y_pred: torch.Tensor, Y_true: torch.Tensor, n: int, m: int) -> torch.Tensor:
+    def compute_loss(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
+                     n: int, m: int) -> torch.Tensor:
         return self.compute_nell(Y_pred, Y_true, n, m) + self.model.dkl
 
     def compute_error(self, Y_pred: torch.Tensor, Y_true: torch.Tensor) -> torch.Tensor:
-        return torch.sqrt(torch.mean(torch.pow((Y_true - Y_pred), 2)))  # ok for regression
-
+        return torch.sqrt(torch.mean(torch.pow((Y_true - Y_pred), 2))
+                          )  # ok for regression
 
     def train_batch(self, data: torch.Tensor, target: torch.Tensor,
                     train_verbose: bool, train_log_interval: int):
@@ -75,7 +79,8 @@ class TrainerRegressor():
         self.optimizer.zero_grad()
         output = self.model(data)
 
-        loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
+        loss = self.compute_loss(output, target, len(
+            self.train_dataloader.dataset), data.size(0))
         error = self.compute_error(output, target)
         loss.backward()
 
@@ -93,8 +98,8 @@ class TrainerRegressor():
 
         self.optimizer.step()
 
-
-    def train_per_iterations(self, iterations: int, train_verbose: bool, train_log_interval: int):
+    def train_per_iterations(self, iterations: int,
+                             train_verbose: bool, train_log_interval: int):
         """ Implement the logic of training the model. """
         self.model.train()
         dataloader_iterator = iter(self.train_dataloader)
@@ -103,7 +108,7 @@ class TrainerRegressor():
         for i in range(iterations):
             try:
                 data, target = next(dataloader_iterator)
-            except:
+            except BaseException:
                 del dataloader_iterator
                 dataloader_iterator = iter(self.train_dataloader)
                 data, target = next(dataloader_iterator)
@@ -111,15 +116,12 @@ class TrainerRegressor():
 
             self.train_batch(data, target, train_verbose, train_log_interval)
 
-
     def train_epochs(self, epochs: int):
 
         for _ in range(epochs):
             self.current_epoch += 1
             for batch_idx, (data, target) in enumerate(self.train_dataloader):
-             self.train_batch(data, target)
-
-
+                self.train_batch(data, target)
 
     def test(self):
         self.model.eval()
@@ -129,7 +131,8 @@ class TrainerRegressor():
             for data, target in self.test_dataloader:
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
-                batch_loss = self.compute_nell(output, target, len(self.test_dataloader.dataset), data.size(0))
+                batch_loss = self.compute_nell(output, target, len(
+                    self.test_dataloader.dataset), data.size(0))
                 test_nell += batch_loss
                 test_error += self.compute_error(output, target)
 
@@ -142,9 +145,8 @@ class TrainerRegressor():
         self.logger.scalar_summary('loss/test', test_nell, self.current_iteration)
         self.logger.scalar_summary('error/test', test_error, self.current_iteration)
 
-
-
-    def fit(self, iterations: int, test_interval: int, train_verbose: bool, train_log_interval: int):
+    def fit(self, iterations: int, test_interval: int,
+            train_verbose: bool, train_log_interval: int):
         for _ in range(iterations // test_interval):
             self.test()
             self.train_per_iterations(test_interval, train_verbose, train_log_interval)

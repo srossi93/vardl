@@ -22,9 +22,10 @@ from ..layers import BayesianLinear
 from ..likelihoods import Gaussian
 from . import BaseBayesianNet
 
+
 class RegrBayesianNet(BaseBayesianNet):
 
-    def __init__(self, architecure:nn.Sequential, dtype:torch.dtype = torch.float32):
+    def __init__(self, architecure: nn.Sequential, dtype: torch.dtype = torch.float32):
         super(RegrBayesianNet, self).__init__()
 
         self.dtype = dtype
@@ -33,4 +34,3 @@ class RegrBayesianNet(BaseBayesianNet):
 
     def forward(self, input):
         return self.architecture(input)
-

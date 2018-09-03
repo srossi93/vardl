@@ -21,9 +21,9 @@ from typing import List
 
 
 class BaseDistribution(nn.Module):
-#    __metaclass__ = abc.ABCMeta
+    #    __metaclass__ = abc.ABCMeta
 
-#    @abc.abstractclassmethod
+    #    @abc.abstractclassmethod
     def __init__(self):
         super(BaseDistribution, self).__init__()
         NotImplementedError("Subclass should implement this.")
@@ -34,4 +34,3 @@ class BaseDistribution(nn.Module):
 
     def optimize(self, train: bool = True):
         NotImplementedError("Subclass should implement this.")
-

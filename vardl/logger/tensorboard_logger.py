@@ -17,6 +17,7 @@
 from . import BaseLogger
 from tensorboardX import SummaryWriter
 
+
 class TensorboardLogger(BaseLogger):
 
     def __init__(self, directory: str):
@@ -26,5 +27,3 @@ class TensorboardLogger(BaseLogger):
 
     def scalar_summary(self, tag, value, step):
         self.writer.add_scalar(tag, value, step)
-
-

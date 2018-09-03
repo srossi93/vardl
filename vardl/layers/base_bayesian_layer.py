@@ -39,12 +39,5 @@ class BaseBayesianLayer(nn.Module):
     def forward(self, *input):
         raise NotImplementedError()
 
-
     def train(self, mode=True):
         self.nmc = self.nmc_train if mode else self.nmc_test
-
-
-
-
-
-

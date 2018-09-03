@@ -17,6 +17,7 @@
 
 import abc
 
+
 class BaseLogger:
     __metaclass__ = abc.ABCMeta
 
@@ -35,4 +36,3 @@ class BaseLogger:
     @abc.abstractmethod
     def histo_summary(self, tag, values, step, bins=1000):
         raise NotImplementedError("Subclass should implement this.")
-

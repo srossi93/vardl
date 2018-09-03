@@ -51,18 +51,16 @@ class MatrixGaussianDistribution(BaseDistribution):
         self.device = device
         self.dtype = dtype
 
-
         self._mean = nn.Parameter(
             torch.zeros(self.n, self.m,
                         dtype=self.dtype,
                         device=self.device),
             requires_grad=False)
 
-
         self._logvars = nn.Parameter(
             torch.ones(self.n, self.m,   #
-                                             dtype=dtype,
-                                             device=self.device) * np.log(1. / self.n),
+                       dtype=dtype,
+                       device=self.device) * np.log(1. / self.n),
             requires_grad=False)
 
         if self.approx == 'full':
@@ -84,12 +82,13 @@ class MatrixGaussianDistribution(BaseDistribution):
             rank = 10
 
             self._cov_low_rank = nn.Parameter(torch.zeros(self.n, rank,
-                                                      dtype=self.dtype,
-                                                      device=self.device) *
+                                                          dtype=self.dtype,
+                                                          device=self.device) *
                                               torch.ones(self.m, 1, 1,
-                                                     dtype=self.dtype,
-                                                     device=self.device),
+                                                         dtype=self.dtype,
+                                                         device=self.device),
                                               requires_grad=False)
+
     @property
     def mean(self):
         return self._mean
@@ -122,11 +121,9 @@ class MatrixGaussianDistribution(BaseDistribution):
     def cov_low_rank(self, value: torch.Tensor):
         self._cov_low_rank.data = value
 
-
     def optimize(self, train: bool = True):
         for param in self.parameters():
             param.requires_grad = train
-
 
     def sample(self, n_samples: int) -> torch.Tensor:
 
@@ -145,7 +142,8 @@ class MatrixGaussianDistribution(BaseDistribution):
 
             for i in range(self.m):
                 cov_lower_triangular = torch.tril(self.cov_lower_triangular[i, :, :], -1)
-                L_chol = cov_lower_triangular + torch.diagflat(torch.exp(self.logvars[i]))
+                L_chol = cov_lower_triangular + \
+                    torch.diagflat(torch.exp(self.logvars[i]))
                 w_sample[:, :, i] = torch.add(torch.matmul(L_chol, epsilon_for_W_sample[:, :, i].t()).t(),
                                               self.mean[:, i])
 
@@ -183,13 +181,6 @@ class MatrixGaussianDistribution(BaseDistribution):
             pass
         return Y
 
-
     def extra_repr(self):
         string = r"""approx={}""".format(self.approx)
         return string
-
-
-
-
-
-
