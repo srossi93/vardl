@@ -15,4 +15,4 @@ r"""
 
 """
 
-from .trainer import TrainerRegressor
+from .trainer_regressor import TrainerRegressor

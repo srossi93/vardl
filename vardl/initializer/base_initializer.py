@@ -14,10 +14,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .base_initializer import BaseInitializer
-from .heuristic_initializer import HeuristicInitializer
-from .orthogonal_initializer import OrthogonalInitializer
-from .lsuv_initializer import LSUVInitializer
-from .uninformative_initializer import UninformativeInitializer
-from .xavier_normal_initializer import XavierNormalInitializer
-from .blm_initializer import BLMInitializer
+
+from ..layers import BayesianLinear
+
+
+class BaseInitializer():
+    def __init__(self, model):
+        self.model = model
+        self.layers = []
+        self._layers_to_initialize()
+
+    def _layers_to_initialize(self):
+        for i, layer in enumerate(self.model.architecture):
+            if type(layer) is BayesianLinear:
+                self.layers.append((i, layer))
+
+    def _initialize_layer(self, layer: BayesianLinear, layer_index: int=None):
+        raise NotImplementedError()
+
+    def initialize(self):
+        for i, layer in self.layers:
+            self._initialize_layer(layer, i)
+
+    def __repr__(self):
+        return str(self.layers)

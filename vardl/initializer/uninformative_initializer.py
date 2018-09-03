@@ -14,10 +14,31 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .base_initializer import BaseInitializer
-from .heuristic_initializer import HeuristicInitializer
-from .orthogonal_initializer import OrthogonalInitializer
-from .lsuv_initializer import LSUVInitializer
-from .uninformative_initializer import UninformativeInitializer
-from .xavier_normal_initializer import XavierNormalInitializer
-from .blm_initializer import BLMInitializer
+import torch
+import numpy as np
+
+from torch.utils.data import DataLoader
+
+
+from . import BaseInitializer
+from ..layers import BayesianLinear
+
+class UninformativeInitializer(BaseInitializer):
+
+    def __init__(self, model, ):
+        super(UninformativeInitializer, self).__init__(model)
+
+
+
+    def _initialize_layer(self, layer: BayesianLinear):
+
+        layer.q_posterior_W.mean = torch.zeros_like(layer.q_posterior_W.mean)
+
+        if layer.q_posterior_W.approx == 'factorized':
+            layer.q_posterior_W.logvars = torch.zeros_like(layer.q_posterior_W.logvars)
+
+        elif layer.approx == 'full':
+            raise NotImplementedError()
+        else:
+            raise NotImplementedError()
+
