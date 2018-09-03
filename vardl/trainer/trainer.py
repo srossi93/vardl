@@ -36,7 +36,7 @@ class TrainerRegressor():
                  device: str,
                  seed: int,
                  logger: BaseLogger=None):
-        assert device == 'cuda' or device == 'cpu'
+       
         assert optimizer == 'Adam'
 
         self.device = device
