@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .base_logger import BaseLogger  # noqa: F401
+from .tensorboard_logger import TensorboardLogger
 
 from functools import wraps
 from time import time

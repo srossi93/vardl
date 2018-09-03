@@ -21,8 +21,7 @@ class BaseLogger:
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def __int__(self, filename: str):
-        self.filename = filename
+    def __int__(self, directory: str):
         raise NotImplementedError("Subclass should implement this.")
 
     @abc.abstractmethod

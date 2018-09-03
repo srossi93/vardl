@@ -13,3 +13,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+from . import BaseLogger
+from tensorboardX import SummaryWriter
+
+class TensorboardLogger(BaseLogger):
+
+    def __init__(self, directory: str):
+        super(TensorboardLogger, self).__init__()
+        self.directory = directory
+        self.writer = SummaryWriter('%s/' % (self.directory))
+
+    def scalar_summary(self, tag, value, step):
+        self.writer.add_scalar(tag, value, step)
+
+

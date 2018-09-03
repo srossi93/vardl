@@ -74,10 +74,10 @@ class TrainerRegressor():
         data, target = data.to(self.device), target.to(self.device)
         self.optimizer.zero_grad()
         output = self.model(data)
-        loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
-        error= self.compute_error(output, target),
-        loss.backward()
 
+        loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
+        error = self.compute_error(output, target)
+        loss.backward()
 
         if self.current_iteration % train_log_interval == 0 and train_verbose:
             print(colored('Train', 'blue', attrs=['bold']),
@@ -86,6 +86,10 @@ class TrainerRegressor():
                    self.model.likelihood.log_noise_var.item()))
 
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
+        self.logger.scalar_summary('error/train', error, self.current_iteration)
+        self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
+        self.logger.scalar_summary('model/log_noise_var', self.model.likelihood.log_noise_var,
+                                   self.current_iteration)
 
         self.optimizer.step()
 
@@ -129,11 +133,14 @@ class TrainerRegressor():
                 test_nell += batch_loss
                 test_error += self.compute_error(output, target)
 
-                test_nell /= len(self.test_dataloader.dataset)
+        test_nell /= len(self.test_dataloader.dataset)
         test_error /= len(self.test_dataloader)
 
         print(colored('Test', 'green', attrs=['bold']),
               " || iter=%5d   mnll=%10.3f   rmse=%8.3f" % (self.current_iteration, test_nell.item(), test_error.item()))
+
+        self.logger.scalar_summary('loss/test', test_nell, self.current_iteration)
+        self.logger.scalar_summary('error/test', test_error, self.current_iteration)
 
 
 
