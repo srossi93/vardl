@@ -184,6 +184,12 @@ class MatrixGaussianDistribution(BaseDistribution):
         return Y
 
 
+    def extra_repr(self):
+        string = r"""approx={}""".format(self.approx)
+        return string
+
+
+
 
 
 

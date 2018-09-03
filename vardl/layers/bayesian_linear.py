@@ -117,7 +117,7 @@ class BayesianLinear(BaseBayesianLayer):
         return Y
 
     def extra_repr(self):
-        return r"""in_features={}, out_features={}, bias={}, local_repr={}""".format(
-            self.in_features, self.out_features, self.bias,
-            self.approx, self.local_reparameterization)
+        string = r"""in_features={}, out_features={}, bias={}, local_repr={}""".format(
+            self.in_features, self.out_features, self.bias, self.local_reparameterization)
+        return string
 

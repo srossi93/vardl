@@ -24,7 +24,7 @@ from . import BaseBayesianNet
 
 class RegrBayesianNet(BaseBayesianNet):
 
-    def __init__(self, architecure:nn.Sequential, dtype:torch.dtype):
+    def __init__(self, architecure:nn.Sequential, dtype:torch.dtype = torch.float32):
         super(RegrBayesianNet, self).__init__()
 
         self.dtype = dtype

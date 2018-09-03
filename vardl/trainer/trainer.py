@@ -36,7 +36,7 @@ class TrainerRegressor():
                  device: str,
                  seed: int,
                  logger: BaseLogger=None):
-       
+
         assert optimizer == 'Adam'
 
         self.device = device
