@@ -29,6 +29,8 @@ class OrthogonalInitializer(BaseInitializer):
     def __init__(self, model, ):
         super(OrthogonalInitializer, self).__init__(model)
 
+        print('INFO - Initialization with Othogonal Matrix')
+
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 
         torch.nn.init.orthogonal_(layer.q_posterior_W.mean)

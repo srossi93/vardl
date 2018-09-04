@@ -39,9 +39,11 @@ class BLMInitializer(BaseInitializer):
         self.lognoise = lognoise * torch.ones(1, device=self.device)
         self.log_alpha = logalpha * torch.ones(1, device=self.device)
 
+        print('INFO - Initialization with BayesianLinear Model')
+
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
-        print('INFO: initialization of layer %d' % layer_index)
+        print('INFO - Initialization of layer %d' % layer_index)
 
         try:
             X, Y = next(self.train_dataloader_iterator)

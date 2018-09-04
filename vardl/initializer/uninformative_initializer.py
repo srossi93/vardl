@@ -28,6 +28,7 @@ class UninformativeInitializer(BaseInitializer):
 
     def __init__(self, model, ):
         super(UninformativeInitializer, self).__init__(model)
+        print('INFO - Initialization with Uninformative posterior')
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index:int = None):
 

@@ -26,6 +26,8 @@ class HeuristicInitializer(BaseInitializer):
     def __init__(self, model):
         super(HeuristicInitializer, self).__init__(model)
 
+        print('INFO - Initialization with Heuristic')
+
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 
         stdv = float(1. / torch.sqrt(torch.ones(1) * layer.in_features))

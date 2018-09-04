@@ -36,6 +36,8 @@ class LSUVInitializer(BaseInitializer):
         self.max_iter = max_iter
         self.device = device
 
+        print('INFO - Initialization with LSUV')
+
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
         torch.nn.init.orthogonal_(layer.q_posterior_W.mean)

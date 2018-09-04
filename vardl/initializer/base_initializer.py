@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from time import time
 
 from ..layers import BayesianLinear
 
@@ -33,8 +34,11 @@ class BaseInitializer():
         raise NotImplementedError()
 
     def initialize(self):
+        t_start = time()
         for i, layer in self.layers:
             self._initialize_layer(layer, i)
+        t_end = time()
+        print('INFO - Initialization done in %.4f sec.' % (t_end - t_start))
 
     def __repr__(self):
         return str(self.layers)
