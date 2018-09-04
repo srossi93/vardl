@@ -28,38 +28,46 @@ from ..likelihoods import Softmax
 
 class BLMInitializer(BaseInitializer):
 
-    def __init__(self, model, train_dataloader: DataLoader):
+    def __init__(self, model, train_dataloader: DataLoader,
+                 device: torch.device,
+                 lognoise: float = -2,
+                 logalpha: float = -4):
         super(BLMInitializer, self).__init__(model)
         self.train_dataloader = train_dataloader
         self.train_dataloader_iterator = iter(self.train_dataloader)
-        self.lognoise = -2 * torch.ones(1)
-        self.log_alpha = -4 * torch.ones(1)
+        self.device = device
+        self.lognoise = lognoise * torch.ones(1, device=self.device)
+        self.log_alpha = logalpha * torch.ones(1, device=self.device)
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
+        print('INFO: initialization of layer %d' % layer_index)
+
         try:
             X, Y = next(self.train_dataloader_iterator)
-        except BaseException:
+        except:
             self.train_dataloader_iterator = iter(self.train_dataloader)
             X, Y = next(self.train_dataloader_iterator)
 
         for out_index in range(layer.out_features):
-
             if out_index % Y.size(1):
                 try:
                     X, Y = next(self.train_dataloader_iterator)
-                except BaseException:
+                except:
                     self.train_dataloader_iterator = iter(self.train_dataloader)
                     X, Y = next(self.train_dataloader_iterator)
 
-            if layer_index == len(self.model.architecture) - \
-                    1 and type(self.model.likelihood == Softmax):
+            X = X.to(self.device)
+            Y = Y.to(self.device)
+
+            if layer_index == len(self.model.architecture) - 1 \
+                    and type(self.model.likelihood) == Softmax:
                 # - If we are in the last layer and it is a classification problem,
                 # - the labels are transformed as Dirichlet variables
                 vv = torch.log(1.0 + 1.0 / (Y + torch.exp(self.log_alpha)))
                 mm = torch.log(Y + torch.exp(self.log_alpha)) - vv / 2.0
             else:
-                vv = self.lognoise * torch.ones_like(Y)  # -2
+                vv = torch.ones_like(Y) * self.lognoise  # -2
                 mm = Y
 
             if layer_index == 0:
@@ -68,9 +76,12 @@ class BLMInitializer(BaseInitializer):
 
             else:
                 stop_l = -len(list(self.model.architecture.children())) + layer_index
+                new_in_data = nn.Sequential(
+                        *list(self.model.architecture)[:stop_l])(X).mean(dim=0)
+
                 blm_W_m, blm_W_cov = bayesian_linear_model(
                     nn.Sequential(
-                        *list(self.model.architecture.children())[:stop_l])(X).mean(dim=0),
+                        *list(self.model.architecture)[:stop_l])(X).mean(dim=0),
                     mm[:, np.random.random_integers(0, Y.size(1) - 1)],
                     vv[:, np.random.random_integers(0, Y.size(1) - 1)])
 
@@ -78,8 +89,9 @@ class BLMInitializer(BaseInitializer):
                 blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
                 # print(layer.q_W_logv.size(), blm_W_logv.size())
                 # blm_W_logv = blm_W_cov.diag().log()
-                layer.q_posterior_W.mean[:, out_index] = blm_W_m
-                layer.q_posterior_W.logvars[:, out_index] = blm_W_logv
+                #print(layer.q_posterior_W.mean)
+                layer.q_posterior_W.mean.data[:, out_index] = blm_W_m
+                layer.q_posterior_W.logvars.data[:, out_index] = blm_W_logv
 
             elif layer.approx == 'full':
                 raise NotImplementedError()
@@ -91,13 +103,15 @@ class BLMInitializer(BaseInitializer):
                 layer.q_W_L_chol_Sigma.data.copy_(q_chol_L)
 
 
-def bayesian_linear_model(X, Y, log_noise):
+def bayesian_linear_model(X: torch.Tensor, Y: torch.Tensor, log_noise: torch.Tensor) -> torch.Tensor:
 
-    noise_var = torch.exp(log_noise * torch.ones(1))
+    noise_var = torch.exp(log_noise)
+
+
+    identity = torch.eye(X.size(1), device=X.device)
 
     W_true_post_cov = torch.inverse(
-        torch.eye(
-            X.size(1)) +
+        identity +
         torch.matmul(
             X.t(),
             torch.mul(

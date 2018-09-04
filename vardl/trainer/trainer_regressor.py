@@ -86,8 +86,9 @@ class TrainerRegressor():
 
         if self.current_iteration % train_log_interval == 0 and train_verbose:
             print(colored('Train', 'blue', attrs=['bold']),
-                  "|| iter=%5d   loss=%10.0f  error=%.2f  log_theta_noise_var=%5.2f" %
-                  (self.current_iteration, loss.item(), error.item(),
+                  "|| iter=%5d   loss=%10.0f  dkl=%8.0f  error=%.2f  log_theta_noise_var=%5.2f" %
+                  (self.current_iteration, loss.item(), self.model.dkl.item(),
+                   error.item(),
                    self.model.likelihood.log_noise_var.item()))
 
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
