@@ -105,7 +105,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                     'nmc_train': nmc_train,
                     'device': torch.device(device)}
 
-    hidden_units = 10
+    hidden_units = 100
     arch = nn.Sequential(
         vardl.layers.BayesianLinear(in_features=X.size(1), out_features=hidden_units,
                                     **layer_config),
