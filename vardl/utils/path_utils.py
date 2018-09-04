@@ -14,18 +14,33 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from . import BaseLogger
-from ..utils import next_path
-from tensorboardX import SummaryWriter
 
 
-class TensorboardLogger(BaseLogger):
+import os
 
-    def __init__(self, directory: str):
-        super(TensorboardLogger, self).__init__()
+def next_path(path_pattern):
+    """
+    Finds the next free path in an sequentially named list of files
 
-        self.directory = next_path(directory+'/run-%04d')
-        self.writer = SummaryWriter('%s/' % (self.directory))
+    e.g. path_pattern = 'file-%s.txt':
 
-    def scalar_summary(self, tag, value, step):
-        self.writer.add_scalar(tag, value, step)
+    file-1.txt
+    file-2.txt
+    file-3.txt
+
+    Runs in log(n) time where n is the number of existing files in sequence
+    """
+    i = 1
+
+    # First do an exponential search
+    while os.path.exists(path_pattern % i):
+        i = i * 2
+
+    # Result lies somewhere in the interval (i/2..i]
+    # We call this interval (a..b] and narrow it down until a + 1 = b
+    a, b = (i / 2, i)
+    while a + 1 < b:
+        c = (a + b) / 2 # interval midpoint
+        a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
+
+    return path_pattern % b
