@@ -29,7 +29,7 @@ class UninformativeInitializer(BaseInitializer):
     def __init__(self, model, ):
         super(UninformativeInitializer, self).__init__(model)
 
-    def _initialize_layer(self, layer: BayesianLinear):
+    def _initialize_layer(self, layer: BayesianLinear, layer_index:int = None):
 
         layer.q_posterior_W.mean = torch.zeros_like(layer.q_posterior_W.mean)
 

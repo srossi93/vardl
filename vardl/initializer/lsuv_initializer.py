@@ -28,16 +28,18 @@ from ..layers import BayesianLinear
 class LSUVInitializer(BaseInitializer):
 
     def __init__(self, model, train_dataloader: DataLoader,
-                 tollerance: float, max_iter: int):
+                 tollerance: float, max_iter: int, device: torch.device):
         super(LSUVInitializer, self).__init__(model)
         self.train_dataloader = train_dataloader
         self.train_dataloader_iterator = iter(self.train_dataloader)
         self.tollerance = tollerance
         self.max_iter = max_iter
+        self.device = device
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
         torch.nn.init.orthogonal_(layer.q_posterior_W.mean)
+
 
         try:
             data, target = next(self.train_dataloader_iterator)
@@ -45,13 +47,12 @@ class LSUVInitializer(BaseInitializer):
             self.train_dataloader_iterator = iter(self.train_dataloader)
             data, target = next(self.train_dataloader_iterator)
 
+        data = data.to(self.device)
+        target = target.to(self.device)
+
         last_idx = -len(list(self.model.architecture.children())) + layer_index + 1
 
-        layer_output = nn.Sequential(
-            *
-            list(
-                self.model.architecture.children())[
-                :last_idx])(data)
+        layer_output = nn.Sequential(*list(self.model.architecture)[:last_idx])(data)
 
         current_output_variance = layer_output.var()
 
@@ -70,6 +71,8 @@ class LSUVInitializer(BaseInitializer):
                 self.train_dataloader_iterator = iter(self.train_dataloader)
                 data, target = next(self.train_dataloader_iterator)
 
+            data = data.to(self.device)
+
             layer_output = nn.Sequential(
                 *list(self.model.architecture.children())[:last_idx])(data)
             current_output_variance = layer_output.var()
@@ -78,11 +81,10 @@ class LSUVInitializer(BaseInitializer):
               (layer_index, step, current_output_variance))
 
         if layer.q_posterior_W.approx == 'factorized':
-            var = (2. * torch.ones(1)) / (layer.in_features)
+            var = (2.) / (layer.in_features)
             layer.q_posterior_W.logvars = (
-                np.log(var) *
                 torch.ones_like(
-                    layer.q_posterior_W.logvars))
+                    layer.q_posterior_W.logvars) * np.log(var))
 
         elif layer.approx == 'full':
             raise NotImplementedError()

@@ -26,16 +26,13 @@ class XavierNormalInitializer(BaseInitializer):
     def __init__(self, model):
         super(XavierNormalInitializer, self).__init__(model)
 
-    def _initialize_layer(self, layer: BayesianLinear):
+    def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 
         layer.q_posterior_W.mean = torch.zeros_like(layer.q_posterior_W.mean)
 
         if layer.q_posterior_W.approx == 'factorized':
-            var = (2. * torch.ones(1)) / (layer.in_features + layer.out_features)
-            layer.q_posterior_W.logvars = (
-                np.log(var) *
-                torch.ones_like(
-                    layer.q_posterior_W.logvars))
+            var = (2. ) / (layer.in_features + layer.out_features)
+            layer.q_posterior_W.logvars = ( torch.ones_like(layer.q_posterior_W.logvars) * np.log(var) )
         elif layer.approx == 'full':
             raise NotImplementedError()
         else:

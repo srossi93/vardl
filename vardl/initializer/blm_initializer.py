@@ -50,7 +50,8 @@ class BLMInitializer(BaseInitializer):
             X, Y = next(self.train_dataloader_iterator)
 
         for out_index in range(layer.out_features):
-            if out_index % Y.size(1):
+
+            if not out_index % Y.size(1):   # TODO: test if it's correct with multiple output dimensions
                 try:
                     X, Y = next(self.train_dataloader_iterator)
                 except:
@@ -59,6 +60,8 @@ class BLMInitializer(BaseInitializer):
 
             X = X.to(self.device)
             Y = Y.to(self.device)
+            #print(Y)
+#            print(out_index % Y.size(1))
 
             if layer_index == len(self.model.architecture) - 1 \
                     and type(self.model.likelihood) == Softmax:

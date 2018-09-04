@@ -132,13 +132,15 @@ class TrainerRegressor():
             for data, target in self.test_dataloader:
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
-                batch_loss = self.compute_nell(output, target, len(
-                    self.test_dataloader.dataset), data.size(0))
+                batch_loss = self.compute_nell(output, target, 1, 1)
+                                               #len(self.test_dataloader.dataset), data.size(0))
                 test_nell += batch_loss
-                test_error += self.compute_error(output, target)
+                test_error += torch.sum((self.model.likelihood.predict(output)[0] - target).pow(2))
+                #test_error += self.compute_error(output, target)
 
         test_nell /= len(self.test_dataloader.dataset)
-        test_error /= len(self.test_dataloader)
+        test_error = torch.sqrt(test_error/len(self.test_dataloader.dataset))
+        #test_error /= len(self.test_dataloader)
 
         print(colored('Test', 'green', attrs=['bold']),
               " || iter=%5d   mnll=%10.3f   rmse=%8.3f" % (self.current_iteration, test_nell.item(), test_error.item()))
