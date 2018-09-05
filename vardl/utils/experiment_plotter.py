@@ -63,6 +63,33 @@ class ExperimentPlotter():
             self._savefig('pdf')
             self._savefig('tex')
 
+
+    def write_summary_tex(self, tags):
+        summary = ''
+        for tag in tags:
+            summary += '==== %s ====\n' % tag.upper()
+
+            for method in self.methods:
+                data = self.raw_data[method]
+
+                aggr_data = data[data.tag == tag].groupby('step')
+
+                steps = aggr_data.mean().index.tolist()
+                final_mean = aggr_data.mean()['value'].iloc[-1]
+                final_std = aggr_data.std()['value'].iloc[-1]
+
+                summary += "%s: $%.4f \\pm %.3f$\n" % (method, final_mean, final_std)
+
+            summary += '\n\n'
+
+        savepath = self.savepath + '/' + self.name + '-summary.txt'
+        with open(savepath, 'w') as fd:
+            fd.write(summary)
+
+        print(summary)
+        return
+
+
     def _get_runs_in_dir(self, path: str):
         return glob.glob('%s/**/events.out.tfevents*' % path, recursive=True)
 
@@ -121,7 +148,7 @@ class ExperimentPlotter():
             wide_to_ascii.update({0x3000: u' ', 0x2212: u'-'})  # space and minus
             tikz_code = tikz_code.translate(wide_to_ascii)
 
-            print(tikz_code[39934])
+
             tikz_code = tikz_code.encode('ascii')
             with open(savepath, 'wb') as fd:
                 fd.write(tikz_code)
