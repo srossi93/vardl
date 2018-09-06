@@ -16,6 +16,7 @@ class ExperimentPlotter():
         self.raw_data = {}
         self.aggr_data = {}
         self.savepath = savepath
+        self.upper_clip = 100
 
     def parse(self):
         for method in self.methods:
@@ -27,7 +28,10 @@ class ExperimentPlotter():
     def plot_tag(self, method, tag, ax, label):
         data = self.raw_data[method]
 
-        aggr_data = data[data.tag == tag].groupby('step')
+        filtered_data = data[data.tag == tag]
+        filtered_data.value = filtered_data.value.where(filtered_data.value <= self.upper_clip, self.upper_clip)
+
+        aggr_data = filtered_data.groupby('step')
 
         steps = aggr_data.mean().index.tolist()
         means = aggr_data.mean()['value']
@@ -39,7 +43,7 @@ class ExperimentPlotter():
 
         # return means.tolist(), stds.tolist()
 
-    def plot(self, tags, xlim, ylims, xlog: bool, save: bool):
+    def plot(self, tags, xlim, ylims, logx: bool, save: bool):
 
         fig, axs = plt.subplots(len(tags), 1)
 
@@ -52,8 +56,8 @@ class ExperimentPlotter():
                               label=method.upper())
             axs[i].set_ylim(*ylims[i])
             axs[i].set_xlim(*xlim)
-            axs[i].semilogx()
-            axs[i].set_ylabel(tag)
+            axs[i].semilogx() if logx else 0
+            axs[i].set_ylabel(tag.upper())
 
         fig.tight_layout()
         axs[0].set_title(self.name.upper())

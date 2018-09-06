@@ -21,12 +21,16 @@ sys.path.append('../../')
 import torch
 import vardl
 
+from sklearn.model_selection import train_test_split
 
 from sacred import Experiment
 from sacred.observers import FileStorageObserver
+from sacred.stflow import LogFileWriter
 
+from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, TensorDataset
 from torch.utils.data.dataset import random_split
+from sklearn.model_selection import train_test_split
 
 import torch.nn as nn
 
@@ -109,18 +113,6 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
         vardl.layers.BayesianLinear(in_features=hidden_units, out_features=hidden_units,
                                     **layer_config),
         nn.ReLU(),
-        vardl.layers.BayesianLinear(in_features=hidden_units, out_features=hidden_units,
-                                    **layer_config),
-        nn.ReLU(),
-        vardl.layers.BayesianLinear(in_features=hidden_units, out_features=hidden_units,
-                                    **layer_config),
-        nn.ReLU(),
-        vardl.layers.BayesianLinear(in_features=hidden_units, out_features=hidden_units,
-                                    **layer_config),
-        nn.ReLU(),
-        vardl.layers.BayesianLinear(in_features=hidden_units, out_features=hidden_units,
-                                    **layer_config),
-        nn.ReLU(),
         vardl.layers.BayesianLinear(in_features=hidden_units, out_features=Y.size(1),
                                     **layer_config),
     )
@@ -161,16 +153,11 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
         initializer = vardl.initializer.OrthogonalInitializer(model=model)
 
     elif init_strategy == 'lsuv':
-        init_dataloader = DataLoader(train_dataset,
-                                      batch_size=4,
-                                      shuffle=True,
-                                      drop_last=True,
-                                      num_workers=0)
         initializer = vardl.initializer.LSUVInitializer(model=model,
-                                                        tollerance=0.1,
-                                                        max_iter=100,
+                                                        tollerance=0.01,
+                                                        max_iter=1000,
                                                         device=device,
-                                                        train_dataloader=init_dataloader)
+                                                        train_dataloader=train_dataloader)
 
     elif init_strategy == 'blm':
         init_dataloader = DataLoader(train_dataset,

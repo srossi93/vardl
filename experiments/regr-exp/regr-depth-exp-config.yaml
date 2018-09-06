@@ -1,0 +1,17 @@
+batch_size: 64
+iterations: 100000
+lr: 1e-3
+bias: False
+approx: 'factorized'
+local_reparameterization: True
+nmc_train: 100
+nmc_test: 100
+random_seed: 0
+train_test_ratio: 0.90
+test_interval: 250
+dataset: 'powerplant'
+init_strategy: 'blm'
+fold: 0
+device: 'cuda:2'
+dataset_dir: '/mnt/workspace/datasets/'
+#dataset_dir: '/home/srossi/research/datasets'
