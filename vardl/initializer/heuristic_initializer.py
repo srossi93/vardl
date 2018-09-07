@@ -30,19 +30,25 @@ class HeuristicInitializer(BaseInitializer):
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 
-        stdv = float(1. / torch.sqrt(torch.ones(1) * layer.in_features))
+        in_features = layer.q_posterior_W.n
+        out_features = layer.q_posterior_W.m
+
+        stdv = float(1. / torch.sqrt(torch.ones(1) * in_features))
         layer.q_posterior_W.mean = torch.zeros_like(layer.q_posterior_W.mean)
 
         if layer.q_posterior_W.approx == 'factorized':
             layer.q_posterior_W.logvars = torch.ones_like(
                 layer.q_posterior_W.logvars) * 2 * np.log(stdv)
         elif layer.approx == 'full':
-            layer.q_posterior_W.logvars = np.log(1. / layer.in_features) * torch.ones(layer.out_features,
-                                                                                      layer.in_features)
 
-            layer.q_posterior_W.cov_lower_triangular = np.log(1. / layer.in_features) * torch.eye(layer.in_features,
-                                                                                                  layer.in_features) *\
-                torch.ones(layer.out_features, 1, 1)
+
+
+            layer.q_posterior_W.logvars = np.log(1. / in_features) * torch.ones(out_features,
+                                                                                      in_features)
+
+            layer.q_posterior_W.cov_lower_triangular = np.log(1. / in_features) * torch.eye(in_features,
+                                                                                                  in_features) *\
+                torch.ones(out_features, 1, 1)
 
         else:
             raise NotImplementedError()

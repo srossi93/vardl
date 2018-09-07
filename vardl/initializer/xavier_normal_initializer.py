@@ -30,10 +30,13 @@ class XavierNormalInitializer(BaseInitializer):
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 
+        in_features = layer.q_posterior_W.n
+        out_features = layer.q_posterior_W.m
+
         layer.q_posterior_W.mean = torch.zeros_like(layer.q_posterior_W.mean)
 
         if layer.q_posterior_W.approx == 'factorized':
-            var = (2. ) / (layer.in_features + layer.out_features)
+            var = (2. ) / (in_features + out_features)
             layer.q_posterior_W.logvars = ( torch.ones_like(layer.q_posterior_W.logvars) * np.log(var) )
         elif layer.approx == 'full':
             raise NotImplementedError()

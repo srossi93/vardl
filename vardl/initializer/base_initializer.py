@@ -17,7 +17,8 @@
 from time import time
 
 from ..layers import BayesianLinear
-
+from ..layers import BayesianConv2d
+from ..layers import BaseBayesianLayer
 
 class BaseInitializer():
     def __init__(self, model):
@@ -27,7 +28,7 @@ class BaseInitializer():
 
     def _layers_to_initialize(self):
         for i, layer in enumerate(self.model.architecture):
-            if isinstance(layer, BayesianLinear):
+            if issubclass(type(layer), BaseBayesianLayer):
                 self.layers.append((i, layer))
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int=None):
@@ -36,6 +37,7 @@ class BaseInitializer():
     def initialize(self):
         t_start = time()
         for i, layer in self.layers:
+            print('INFO - Initialization of layer %d' % i)
             self._initialize_layer(layer, i)
         t_end = time()
         print('INFO - Initialization done in %.4f sec.' % (t_end - t_start))

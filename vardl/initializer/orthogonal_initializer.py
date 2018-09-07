@@ -36,7 +36,7 @@ class OrthogonalInitializer(BaseInitializer):
         torch.nn.init.orthogonal_(layer.q_posterior_W.mean)
 
         if layer.q_posterior_W.approx == 'factorized':
-            var = (2.) / (layer.in_features)
+            var = (2.) / (layer.q_posterior_W.n)
             layer.q_posterior_W.logvars = (
                 torch.ones_like(
                     layer.q_posterior_W.logvars) * np.log(var))

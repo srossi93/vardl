@@ -43,6 +43,7 @@ class LSUVInitializer(BaseInitializer):
         torch.nn.init.orthogonal_(layer.q_posterior_W.mean)
 
 
+
         try:
             data, target = next(self.train_dataloader_iterator)
         except BaseException:
@@ -82,8 +83,12 @@ class LSUVInitializer(BaseInitializer):
         print('INFO - Variance at layer %d (iter #%d): %.3f' %
               (layer_index, step, current_output_variance))
 
+        in_features = layer.q_posterior_W.n
+        out_features = layer.q_posterior_W.m
+
+
         if layer.q_posterior_W.approx == 'factorized':
-            var = (2.) / (layer.in_features)
+            var = (2.) / (in_features)
             layer.q_posterior_W.logvars = (
                 torch.ones_like(
                     layer.q_posterior_W.logvars) * np.log(var))

@@ -92,6 +92,8 @@ class BayesianLinear(BaseBayesianLayer):
     def forward(self, in_data):
         # Sample nmc times Wr ~ q(Wr | q_W_m, q_W_logv)
 
+        #print(in_data.size())
+
         if not self.local_reparameterization:
             w_sample = self.q_posterior_W.sample(self.nmc)
             Y = torch.matmul(in_data, w_sample)
@@ -110,6 +112,8 @@ class BayesianLinear(BaseBayesianLayer):
             Y = Y.permute(1, 0, 2)  # Stupid Broadcasting
             Y = torch.add(Y, b_sample)
             Y = Y.permute(1, 0, 2)  # It works but it sucks
+
+        #print('lin-output', Y.size())
 
         return Y
 

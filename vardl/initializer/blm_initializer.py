@@ -43,7 +43,11 @@ class BLMInitializer(BaseInitializer):
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
-        print('INFO - Initialization of layer %d' % layer_index)
+        #print('INFO - Initialization of layer %d' % layer_index)
+
+        in_features = layer.q_posterior_W.n
+        out_features = layer.q_posterior_W.m
+
 
         try:
             X, Y = next(self.train_dataloader_iterator)
@@ -51,7 +55,7 @@ class BLMInitializer(BaseInitializer):
             self.train_dataloader_iterator = iter(self.train_dataloader)
             X, Y = next(self.train_dataloader_iterator)
 
-        for out_index in range(layer.out_features):
+        for out_index in range(out_features):
 
             if not out_index % Y.size(1):   # TODO: test if it's correct with multiple output dimensions
                 try:

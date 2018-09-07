@@ -19,6 +19,7 @@ import torch
 import torch.nn as nn
 
 from ..layers import BayesianLinear
+from ..layers import BayesianConv2d
 from ..likelihoods import Gaussian
 
 
@@ -33,5 +34,5 @@ class BaseBayesianNet(nn.Module):
     def dkl(self):
         total_dkl = 0
         for layer in self.architecture:
-            total_dkl += layer.dkl if isinstance(layer, BayesianLinear) else 0
+            total_dkl += layer.dkl if isinstance(layer, BayesianLinear) or isinstance(layer, BayesianConv2d) else 0
         return total_dkl
