@@ -16,3 +16,4 @@ r"""
 """
 
 from .trainer_regressor import TrainerRegressor
+from .trainer_classifier import TrainerClassifier

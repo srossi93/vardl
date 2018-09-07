@@ -27,7 +27,8 @@ class Softmax(BaseLikelihood):
     """
 
     def __init__(self):
-        pass
+        super(Softmax, self).__init__()
+
 
     def log_cond_prob(self, output: torch.Tensor,
                       latent_val: torch.Tensor) -> torch.Tensor:

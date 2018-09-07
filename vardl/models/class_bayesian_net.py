@@ -15,6 +15,22 @@ r"""
 
 """
 
-from .base_bayesian_net import BaseBayesianNet
-from .regr_bayesian_net import RegrBayesianNet
-from .class_bayesian_net import ClassBayesianNet
+import torch
+import torch.nn as nn
+
+from ..layers import BayesianLinear
+from ..likelihoods import Softmax
+from . import BaseBayesianNet
+
+
+class ClassBayesianNet(BaseBayesianNet):
+
+    def __init__(self, architecure: nn.Sequential, dtype: torch.dtype = torch.float32):
+        super(ClassBayesianNet, self).__init__()
+
+        self.dtype = dtype
+        self.architecture = architecure
+        self.likelihood = Softmax()
+
+    def forward(self, input):
+        return self.architecture(input)
