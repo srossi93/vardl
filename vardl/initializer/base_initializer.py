@@ -17,7 +17,6 @@
 from time import time
 
 from ..layers import BayesianLinear
-from ..layers import BayesianConv2d
 from ..layers import BaseBayesianLayer
 
 class BaseInitializer():

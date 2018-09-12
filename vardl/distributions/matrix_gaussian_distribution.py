@@ -127,7 +127,7 @@ class MatrixGaussianDistribution(BaseDistribution):
 
     def sample(self, n_samples: int) -> torch.Tensor:
 
-        epsilon_for_W_sample = torch.randn(n_samples, self.n, self.m,
+        epsilon_for_W_sample = torch.randn(n_samples, self.n, self.m,      # TODO: Fix this
                                            dtype=self.dtype,
                                            device=self.device,
                                            requires_grad=False)
@@ -164,7 +164,7 @@ class MatrixGaussianDistribution(BaseDistribution):
         # giving the fact that for a Gaussian posterior on the weights W, also the
         # posterior on the outputs Y conditional to the inputs X is factorized
         # Gaussian as well
-        epsilon_for_Y_sample = torch.randn(n_sample, in_data.size(-2), self.mean.size(1),
+        epsilon_for_Y_sample = torch.zeros(n_sample, in_data.size(-2), self.mean.size(1),  # TODO: fix this
                                            dtype=self.dtype,
                                            device=self.device,
                                            requires_grad=False)

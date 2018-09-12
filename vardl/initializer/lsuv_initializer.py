@@ -81,7 +81,7 @@ class LSUVInitializer(BaseInitializer):
             current_output_variance = layer_output.var()
 
         print('INFO - Variance at layer %d (iter #%d): %.3f' %
-              (layer_index, step, current_output_variance))
+              (layer_index, step, current_output_variance.cpu()))
 
         in_features = layer.q_posterior_W.n
         out_features = layer.q_posterior_W.m

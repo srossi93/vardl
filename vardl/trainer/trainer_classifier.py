@@ -38,7 +38,7 @@ class TrainerClassifier():
                  seed: int,
                  logger: BaseLogger=None):
 
-        assert optimizer == 'Adam'
+        #assert optimizer == 'Adam'
 
         self.device = device
         self.model = model.to(self.device)
@@ -46,6 +46,10 @@ class TrainerClassifier():
         if optimizer == 'Adam':
             self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                         **optimizer_config)
+        if optimizer == 'SGD':
+            self.optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                                        **optimizer_config)
+
         self.current_epoch = 0
         self.current_iteration = 0
 
@@ -73,6 +77,9 @@ class TrainerClassifier():
         prediction = torch.argmax(mean_prediction, 1)
         target = torch.argmax(Y_true, 1)
         correct = torch.sum(prediction.data == target.data)
+
+        #print(correct.cpu(), Y_true.cpu().size(0))
+
         return 1. - correct.float() / (Y_true.size(0))
 
 
@@ -82,13 +89,14 @@ class TrainerClassifier():
         self.current_iteration += 1
 
         data, target = data.to(self.device), target.to(self.device)
+
         self.optimizer.zero_grad()
         output = self.model(data)
 
-        loss = self.compute_loss(output, target, len(
-            self.train_dataloader.dataset), data.size(0))
+        loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
         error = self.compute_error(output, target)
         loss.backward()
+        self.optimizer.step()
 
         if self.current_iteration % train_log_interval == 0 and train_verbose:
             print(colored('Train', 'blue', attrs=['bold']),
@@ -99,8 +107,16 @@ class TrainerClassifier():
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
         self.logger.scalar_summary('error/train', error, self.current_iteration)
         self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
+        for name, param in self.model.named_parameters():
+            if param.requires_grad:
+                self.logger.writer.add_histogram(name,
+                                                 param.clone().cpu().data.numpy(),
+                                                 self.current_iteration)
+                self.logger.writer.add_histogram(name+'.grad',
+                                                 param.grad.clone().cpu().data.numpy(),
+                                                 self.current_iteration)
 
-        self.optimizer.step()
+
 
     def train_per_iterations(self, iterations: int,
                              train_verbose: bool, train_log_interval: int):
@@ -131,6 +147,7 @@ class TrainerClassifier():
         self.model.eval()
         test_nell = 0
         test_error = 0
+        test_correct = 0
         with torch.no_grad():
             for data, target in self.test_dataloader:
                 data, target = data.to(self.device), target.to(self.device)
@@ -138,10 +155,13 @@ class TrainerClassifier():
                 batch_loss = self.compute_nell(output, target, 1, 1)
                                                #len(self.test_dataloader.dataset), data.size(0))
                 test_nell += batch_loss
+                #test_correct += self.compute_error(output, target)#
                 test_error += self.compute_error(output, target)#
+
 
         test_nell /= len(self.test_dataloader.dataset)
         test_error = test_error/len(self.test_dataloader)
+
         #test_error /= len(self.test_dataloader)
 
         print(colored('Test', 'green', attrs=['bold']),
@@ -151,8 +171,45 @@ class TrainerClassifier():
         self.logger.scalar_summary('error/test', test_error, self.current_iteration)
 
     def fit(self, iterations: int, test_interval: int,
-            train_verbose: bool, train_log_interval: int):
+            train_verbose: bool, train_log_interval: int = 1000):
         for _ in range(iterations // test_interval):
             self.test()
             self.train_per_iterations(test_interval, train_verbose, train_log_interval)
+        self.test()
+
+
+    def fit_log(self, iterations: int, train_verbose):
+        """
+        Train and test in logspace
+        For instance: at it: 100, 200, ..., 1000, 2000, ... 10000, 20000
+
+        :return:
+        """
+
+        import math
+        import numpy as np
+
+
+        start = 0
+        stop = math.ceil(math.log10(iterations))
+        #print(stop)
+
+        list_of_steps = []
+        for d in range(0, stop - start):
+            for i in range(10):
+                list_of_steps.append(10 ** d)
+        #list_of_steps.append(10 ** stop)
+
+        #print(list_of_steps)
+
+
+
+        for step in list_of_steps:
+            self.test()
+            self.train_per_iterations(iterations=step,
+                                          train_verbose=train_verbose,
+                                          train_log_interval=step)
+
+
+
         self.test()

@@ -74,6 +74,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                   approx='factorized',
                                                   dtype=self.dtype,
                                                   device=self.device)
+        self.prior_W.logvars.data.fill_(10)
 
         self.q_posterior_W = MatrixGaussianDistribution(n=self.filter_size,
                                                         m=self.out_channels,
@@ -124,7 +125,7 @@ class BayesianConv2d(BaseBayesianLayer):
 
     def forward(self, input):
 
-        input = input * torch.ones(self.nmc, *input.size())
+        #input = input * torch.ones(self.nmc, *input.size()).to(self.device)
 
         #print('conv2d-input', input.size())
 
@@ -136,27 +137,70 @@ class BayesianConv2d(BaseBayesianLayer):
         #print('batched_input', batched_input.size())
 
         patches = self.unfold_engine(batched_input).transpose(-1, -2)
-        patches = patches.contiguous().view(self.nmc, -1, self.filter_size)
+        #print('patches_before_reshape:', patches.size())
+        patches = patches.contiguous().view( -1, self.filter_size)
+        #print('patches_after_reshape:', patches.size())
 
-        #print('patches', patches.size())
 
 
+        #w_sample = self.q_posterior_W.sample(self.nmc).view(self.nmc, -1)
+        #print('w_sample', w_sample.size())
 
         if not self.local_reparameterization:
             w_sample = self.q_posterior_W.sample(self.nmc)
 
             #print('w_sample', w_sample.size())
 
-            output = torch.matmul(patches, w_sample)
-            output = output.transpose(-1, -2).contiguous().view(self.nmc, -1, self.out_channels, self.out_height, self.out_width)
+            #output = torch.matmul(patches, w_sample)
+            #output = output.transpose(-1, -2).contiguous().view(self.nmc,
+            #                                                    -1,
+            #                                                    self.out_channels,
+            #                                                    self.out_height,
+            #                                                    self.out_width)
 
            # print('conv2d-output', output.size())
+            weights = w_sample.view(self.out_channels, self.in_channels, self.kernel_size,
+                                                   self.kernel_size)
+            input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
+            output = torch.nn.functional.conv2d(input, weights,
+                                                stride=self.stride,
+                                                padding=self.padding,
+                                                dilation=self.dilation)
+
             return output
 
         if self.local_reparameterization:
-            output = self.q_posterior_W.sample_local_repr(self.nmc, patches)
-            output = output.transpose(-1, -2).contiguous().view(self.nmc, -1, self.out_channels, self.out_height,
-                                                                self.out_width)
+            #output = self.q_posterior_W.sample_local_repr(self.nmc, patches)
+            #output = output.transpose(-1, -2).contiguous().view(self.nmc,
+            #                                                    -1,
+            #                                                    self.out_channels,
+            #                                                    self.out_height,
+            #                                                    self.out_width)
+
+            mean_weights = self.q_posterior_W.mean.view(self.out_channels, self.in_channels, self.kernel_size,
+                                                        self.kernel_size)
+            logvars_weights = self.q_posterior_W.logvars.view(self.out_channels, self.in_channels, self.kernel_size,
+                                                        self.kernel_size)
+
+            input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
+            mean_output = torch.nn.functional.conv2d(input, mean_weights,
+                                                stride=self.stride,
+                                                padding=self.padding,
+                                                dilation=self.dilation)
+
+            var_output = torch.nn.functional.conv2d(input.pow(2), logvars_weights.exp(),
+                                                     stride=self.stride,
+                                                     padding=self.padding,
+                                                     dilation=self.dilation)
+
+            #print(mean_output.norm())
+            #print(var_output.norm())
+
+            eps = torch.randn_like(mean_output, requires_grad=False)
+            output = mean_output + eps * torch.sqrt(var_output + 1e-5)
+
+
+
             return output
 
 

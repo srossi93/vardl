@@ -4,6 +4,7 @@ matplotlib.use('agg')
 import matplotlib.pylab as plt
 import glob
 import pandas as pd
+import numpy as np
 
 import matplotlib2tikz
 
@@ -32,6 +33,12 @@ class ExperimentPlotter():
         filtered_data.value = filtered_data.value.where(filtered_data.value <= self.upper_clip, self.upper_clip)
 
         aggr_data = filtered_data.groupby('step')
+        
+        
+        #logscale = np.logspace(0, 5, 1000, endpoint=True)
+        #print(logscale)
+        
+        #print(aggr_data.mean())
 
         steps = aggr_data.mean().index.tolist()
         means = aggr_data.mean()['value']

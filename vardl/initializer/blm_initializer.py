@@ -75,24 +75,27 @@ class BLMInitializer(BaseInitializer):
                 # - the labels are transformed as Dirichlet variables
                 vv = torch.log(1.0 + 1.0 / (Y + torch.exp(self.log_alpha)))
                 mm = torch.log(Y + torch.exp(self.log_alpha)) - vv / 2.0
+                print('Classification Layer')
             else:
                 vv = torch.ones_like(Y) * self.lognoise  # -2
                 mm = Y
 
             if layer_index == 0:
-                blm_W_m, blm_W_cov = bayesian_linear_model(X, mm[:, np.random.random_integers(0, Y.size(1) - 1)],
-                                                           vv[:, np.random.random_integers(0, Y.size(1) - 1)])
+                index = np.random.random_integers(0, Y.size(1) - 1)
+                blm_W_m, blm_W_cov = bayesian_linear_model(X, mm[:, index],
+                                                           vv[:, index])
 
             else:
                 stop_l = -len(list(self.model.architecture.children())) + layer_index
                 new_in_data = nn.Sequential(
                         *list(self.model.architecture)[:stop_l])(X).mean(dim=0)
 
+                index = np.random.random_integers(0, Y.size(1) - 1)
                 blm_W_m, blm_W_cov = bayesian_linear_model(
                     nn.Sequential(
                         *list(self.model.architecture)[:stop_l])(X).mean(dim=0),
-                    mm[:, np.random.random_integers(0, Y.size(1) - 1)],
-                    vv[:, np.random.random_integers(0, Y.size(1) - 1)])
+                    mm[:, index],
+                    vv[:, index])
 
             if layer.approx == 'factorized':
                 blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()

@@ -33,4 +33,5 @@ class ClassBayesianNet(BaseBayesianNet):
         self.likelihood = Softmax()
 
     def forward(self, input):
+        input = input *torch.ones(self.architecture[0].nmc, *input.size()).to(self.architecture[0].device)
         return self.architecture(input)
