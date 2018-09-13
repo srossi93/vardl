@@ -104,9 +104,11 @@ class TrainerClassifier():
                   (self.current_iteration, loss.item(), self.model.dkl.item(),
                    error.item(),))
 
+
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
         self.logger.scalar_summary('error/train', error, self.current_iteration)
         self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
+
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 self.logger.writer.add_histogram(name,

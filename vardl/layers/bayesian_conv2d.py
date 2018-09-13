@@ -69,15 +69,15 @@ class BayesianConv2d(BaseBayesianLayer):
         self.out_width = int(
             (self.in_width + 2*self.padding - self.dilation*(self.kernel_size-1) -1)/self.stride + 1)
 
-        self.prior_W = MatrixGaussianDistribution(n=self.filter_size,
-                                                  m=self.out_channels,
+        self.prior_W = MatrixGaussianDistribution(m=self.filter_size,
+                                                  n=self.out_channels,
                                                   approx='factorized',
                                                   dtype=self.dtype,
                                                   device=self.device)
         self.prior_W.logvars.data.fill_(10)
 
-        self.q_posterior_W = MatrixGaussianDistribution(n=self.filter_size,
-                                                        m=self.out_channels,
+        self.q_posterior_W = MatrixGaussianDistribution(m=self.filter_size,
+                                                        n=self.out_channels,
                                                         approx=self.approx,
                                                         dtype=self.dtype,
                                                         device=self.device)
@@ -125,7 +125,7 @@ class BayesianConv2d(BaseBayesianLayer):
 
     def forward(self, input):
 
-        #input = input * torch.ones(self.nmc, *input.size()).to(self.device)
+        input = input * torch.ones(self.nmc, 1, 1, 1, 1).to(self.device)
 
         #print('conv2d-input', input.size())
 
@@ -136,9 +136,9 @@ class BayesianConv2d(BaseBayesianLayer):
 
         #print('batched_input', batched_input.size())
 
-        patches = self.unfold_engine(batched_input).transpose(-1, -2)
+        #patches = self.unfold_engine(batched_input)#.transpose(-1, -2)
         #print('patches_before_reshape:', patches.size())
-        patches = patches.contiguous().view( -1, self.filter_size)
+        #patches = patches.contiguous().view( -1, self.filter_size)
         #print('patches_after_reshape:', patches.size())
 
 
@@ -147,22 +147,39 @@ class BayesianConv2d(BaseBayesianLayer):
         #print('w_sample', w_sample.size())
 
         if not self.local_reparameterization:
-            w_sample = self.q_posterior_W.sample(self.nmc)
+            w_sample = self.q_posterior_W.sample(self.nmc).view(-1, self.out_channels, self.in_channels, self.kernel_size,
+                                                        self.kernel_size)
 
             #print('w_sample', w_sample.size())
 
-            #output = torch.matmul(patches, w_sample)
-            #output = output.transpose(-1, -2).contiguous().view(self.nmc,
-            #                                                    -1,
-            #                                                    self.out_channels,
-            #                                                    self.out_height,
-            #                                                    self.out_width)
+            #output = torch.matmul(patches, w_sample.view(self.out_channels, self.in_channels * self.kernel_size * self.kernel_size))
+            #output = output.contiguous().view(self.nmc, -1, self.out_channels, self.out_height, self.out_width)
 
            # print('conv2d-output', output.size())
-            weights = w_sample.view(self.out_channels, self.in_channels, self.kernel_size,
+            #input = input.view(-1, self.in_channels, self.in_height, self.in_width)
+            #patches = torch.nn.functional.unfold(input, kernel_size=self.kernel_size, padding=self.padding)\
+            #    .transpose(-1,-2).contiguous().view(self.nmc, -1, self.in_channels * self.kernel_size ** 2)
+            #
+            #output = torch.matmul(patches, w_sample).transpose(-1, -2).contiguous().view(self.nmc, -1, self.out_channels, self.out_height, self.out_width)
+
+            if False:
+                batch_size = input.size(1)
+                patches = torch.nn.functional.unfold(input.view(-1, self.in_channels, self.in_height, self.in_width), self.kernel_size,
+                                                 padding=self.padding, stride=self.stride, dilation=self.dilation).view(self.nmc, batch_size, self.filter_size, -1)
+
+                #print('patches:', patches.size())
+
+                w_matrix_full = (w_sample.view(w_sample.size(0), w_sample.size(1), -1) * torch.ones(batch_size, 1, 1, 1, device=self.device)).transpose(0, 1)
+
+                #print('w:', w_matrix_full.size())
+
+                output = torch.matmul(w_matrix_full, patches)#.view(self.nmc, batch_size, self.out_channels, self.out_height, self.out_width)
+
+            else:
+                weights = w_sample.view(self.out_channels, self.in_channels, self.kernel_size,
                                                    self.kernel_size)
-            input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
-            output = torch.nn.functional.conv2d(input, weights,
+                input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
+                output = torch.nn.functional.conv2d(input, weights,
                                                 stride=self.stride,
                                                 padding=self.padding,
                                                 dilation=self.dilation)

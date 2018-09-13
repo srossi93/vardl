@@ -53,9 +53,16 @@ class LSUVInitializer(BaseInitializer):
         data = data.to(self.device)
         target = target.to(self.device)
 
-        last_idx = -len(list(self.model.architecture.children())) + layer_index + 1
+        last_idx =  layer_index + 1 # -len(list(self.model.architecture.children())) +
 
-        layer_output = nn.Sequential(*list(self.model.architecture)[:last_idx])(data)
+        #print(last_idx, self.model.architecture[last_idx])
+
+        #print(list(self.model.architecture)[:last_idx])
+
+        #layer_output = nn.Sequential(*list(self.model.architecture)[:last_idx])(data)
+
+        cut_model = nn.Sequential(*list(self.model.architecture)[:last_idx])
+        layer_output = cut_model(data)
 
         current_output_variance = layer_output.var()
 
@@ -76,8 +83,9 @@ class LSUVInitializer(BaseInitializer):
 
             data = data.to(self.device)
 
-            layer_output = nn.Sequential(
-                *list(self.model.architecture.children())[:last_idx])(data)
+
+
+            layer_output = cut_model(data)
             current_output_variance = layer_output.var()
 
         print('INFO - Variance at layer %d (iter #%d): %.3f' %
