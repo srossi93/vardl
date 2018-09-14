@@ -178,8 +178,6 @@ class TrainerClassifier():
     def fit(self, iterations: int, test_interval: int,
             train_verbose: bool, train_log_interval: int = 1000):
 
-        self.model.architecture[0].q_posterior_W.mean.data.normal_()
-
         best_test_nell, best_test_error = self.test()
 
         for _ in range(iterations // test_interval):
@@ -194,7 +192,7 @@ class TrainerClassifier():
                 best_test_error = test_error
                 best_test_nell = test_nell
 
-            
+
 
         self.test()
 
