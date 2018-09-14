@@ -98,25 +98,30 @@ class TrainerClassifier():
         loss.backward()
         self.optimizer.step()
 
-        if self.current_iteration % train_log_interval == 0 and train_verbose:
-            print(colored('Train', 'blue', attrs=['bold']),
+
+        # -- Reporting to stdout and to the logger (i.e. tensorboard)
+
+        if self.current_iteration % train_log_interval == 0:
+            if train_verbose:
+                print(colored('Train', 'blue', attrs=['bold']),
                   "|| iter=%5d   loss=%10.0f  dkl=%8.0f  error=%.2f " %
                   (self.current_iteration, loss.item(), self.model.dkl.item(),
                    error.item(),))
 
+            for name, param in self.model.named_parameters():
+                if param.requires_grad:
+                    self.logger.writer.add_histogram(name,
+                                                     param.clone().cpu().data.numpy(),
+                                                     self.current_iteration)
+                    self.logger.writer.add_histogram(name + '.grad',
+                                                     param.grad.clone().cpu().data.numpy(),
+                                                     self.current_iteration)
 
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
         self.logger.scalar_summary('error/train', error, self.current_iteration)
         self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
 
-        for name, param in self.model.named_parameters():
-            if param.requires_grad:
-                self.logger.writer.add_histogram(name,
-                                                 param.clone().cpu().data.numpy(),
-                                                 self.current_iteration)
-                self.logger.writer.add_histogram(name+'.grad',
-                                                 param.grad.clone().cpu().data.numpy(),
-                                                 self.current_iteration)
+
 
 
 

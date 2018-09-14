@@ -22,7 +22,7 @@ from torch.utils.data import DataLoader
 
 
 from . import BaseInitializer
-from ..layers import BayesianLinear
+from ..layers import BayesianLinear, BayesianConv2d
 from ..likelihoods import Softmax
 
 
@@ -82,8 +82,27 @@ class BLMInitializer(BaseInitializer):
 
             if layer_index == 0:
                 index = np.random.random_integers(0, Y.size(1) - 1)
-                blm_W_m, blm_W_cov = bayesian_linear_model(X, mm[:, index],
-                                                           vv[:, index])
+
+                if isinstance(layer, BayesianConv2d):
+                    print('INFO - Extracting patches...')
+                    patches = layer.extract_patches(X).mean(dim=0)
+
+
+                    n_patches = patches.size(-1)
+                    n_weights = patches.size(1)
+
+                    patches = patches.permute(2, 0, 1).contiguous().view(-1, n_weights)
+
+                    labels = (mm[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
+
+                    log_noise = (vv[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
+
+
+                    blm_W_m, blm_W_cov = bayesian_linear_model(patches, labels, log_noise)
+
+                else:
+                    blm_W_m, blm_W_cov = bayesian_linear_model(X, mm[:, index],
+                                                               vv[:, index])
 
             else:
                 stop_l = -len(list(self.model.architecture.children())) + layer_index
@@ -91,17 +110,32 @@ class BLMInitializer(BaseInitializer):
                         *list(self.model.architecture)[:stop_l])(X).mean(dim=0)
 
                 index = np.random.random_integers(0, Y.size(1) - 1)
-                blm_W_m, blm_W_cov = bayesian_linear_model(
-                    nn.Sequential(
-                        *list(self.model.architecture)[:stop_l])(X).mean(dim=0),
+
+                if isinstance(layer, BayesianConv2d):
+                    print('INFO - Extracting patches...')
+                    patches = layer.extract_patches(new_in_data).mean(dim=0)
+
+                    #print('INFO - Done (patches size =', *patches.size(), ')')
+
+                    n_patches = patches.size(-1)
+                    n_weights = patches.size(1)
+
+                    patches = patches.permute(2, 0, 1).contiguous().view(-1, n_weights)
+
+                    labels = (mm[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
+
+                    log_noise = (vv[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
+
+                    blm_W_m, blm_W_cov = bayesian_linear_model(patches, labels, log_noise)
+
+                else:
+                    blm_W_m, blm_W_cov = bayesian_linear_model(
+                    new_in_data,
                     mm[:, index],
                     vv[:, index])
 
             if layer.approx == 'factorized':
                 blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
-                # print(layer.q_W_logv.size(), blm_W_logv.size())
-                # blm_W_logv = blm_W_cov.diag().log()
-                #print(layer.q_posterior_W.mean)
                 layer.q_posterior_W.mean.data[:, out_index] = blm_W_m
                 layer.q_posterior_W.logvars.data[:, out_index] = blm_W_logv
 
@@ -119,16 +153,19 @@ def bayesian_linear_model(X: torch.Tensor, Y: torch.Tensor, log_noise: torch.Ten
 
     noise_var = torch.exp(log_noise)
 
+    #print('X', X.size())
+    #print('Y:', Y.size())
+    #print('lognoise:', log_noise.size())
 
     identity = torch.eye(X.size(1), device=X.device)
 
     W_true_post_cov = torch.inverse(
         identity +
         torch.matmul(
-            X.t(),
+            X.transpose(-1, -2),
             torch.mul(
                 noise_var.unsqueeze(1),
                 X)))
-    W_true_post_mean = torch.matmul(torch.matmul(W_true_post_cov, X.t()), Y / noise_var)
+    W_true_post_mean = torch.matmul(torch.matmul(W_true_post_cov, X.transpose(-1, -2)), Y / noise_var)
 
     return W_true_post_mean, W_true_post_cov
