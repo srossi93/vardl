@@ -1,0 +1,28 @@
+{"name": "pydatasci-gpu",
+  "version": 3,
+  "will_end": true,
+  "services": [
+    { "startup_order": 0,
+      "environment": [["NVIDIA_VISIBLE_DEVICES", "all"]],
+      "name": "exp-conv2d",
+      "resources": {
+        "memory": {"max": 6442450944, "min": 34359738368},
+        "cores": {"max": 2, "min": 8}},
+      "volumes": [],
+      "monitor": true,
+      "essential_count": 1,
+      "ports": [
+        {"protocol": "tcp",
+          "url_template": "http://{ip_port}/",
+          "name": "Jupyter Notebook interface",
+          "port_number": 8888},
+        {"protocol": "tcp",
+          "url_template": "http://{ip_port}/",
+          "name": "Tensorboard",
+          "port_number": 6006}],
+      "command": "./research/vardl/experiments/conv2d_test/start-zoe.sh",
+      "total_count": 1,
+      "labels": ["gpu"],
+      "replicas": 1,
+      "image": "zapps/pydatasci-gpu:10396"}],
+  "size": 512}

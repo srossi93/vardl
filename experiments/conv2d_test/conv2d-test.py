@@ -108,45 +108,8 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                     'nmc_train': nmc_train,
                     'device': torch.device(device)}
 
-    conv1 = vardl.layers.BayesianConv2d(in_channels=1,
-                                        in_height=28,
-                                        in_width=28,
-                                        out_channels=10,
-                                        kernel_size=5,
-                                        **layer_config)
 
-    pool = nn.MaxPool2d(2)
-
-    conv2 = vardl.layers.BayesianConv2d(in_channels=10,
-                                        in_height=13,
-                                        in_width=13,
-                                        out_channels=20,
-                                        kernel_size=5,
-                                        **layer_config)
-
-    layer1 = vardl.layers.BayesianLinear(in_features=500,
-                                         out_features=50,
-                                         **layer_config)
-
-    layer2 = vardl.layers.BayesianLinear(in_features=50,
-                                         out_features=10,
-                                         **layer_config)
-
-    arch = nn.Sequential(
-        conv1,
-        View(-1, 10, 26, 26),
-        pool,
-        View(layer_config['nmc_train'], -1, 10, 13, 13),
-        nn.ReLU(),
-        conv2,
-        View(-1, 20, 11, 11),
-        pool,
-        nn.ReLU(),
-        View(layer_config['nmc_train'], -1, 500),
-        layer1,
-        nn.ReLU(),
-        layer2
-    )
+    arch = vardl.architectures.build_lenet_mnist(**layer_config)
 
     model = vardl.models.ClassBayesianNet(architecure=arch)
 

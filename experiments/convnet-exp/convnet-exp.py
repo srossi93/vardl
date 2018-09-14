@@ -30,7 +30,7 @@ from torch.utils.data.dataset import random_split
 
 import torch.nn as nn
 
-ex = Experiment('conv2d-test')
+ex = Experiment('convnet')
 
 ex.observers.append(FileStorageObserver.create('work'))
 
@@ -54,7 +54,7 @@ def config():
     device = 'cpu'
     dataset_dir = '~'
 
-ex.add_config('conv2d-test-config.yaml')
+ex.add_config('convnet-exp-config.yaml')
 
 
 class View(nn.Module):
@@ -72,12 +72,15 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                    nmc_test, random_seed, train_test_ratio, test_interval, dataset, init_strategy,
                    fold, device, dataset_dir):
 
-    dataset = 'mnist'
+    #dataset = 'cifar10'
 
     logdir = './work/%s/%s' % (dataset, init_strategy)
 
     X, Y = torch.load('%s/%s/complete_%s.pt' % (dataset_dir, dataset, dataset))
-    X = X.view(-1, 1, 28, 28)
+
+    if dataset == 'mnist':
+        X = X.view(-1, 1, 28, 28)
+
 
     vardl.utils.set_seed(random_seed + fold)
 
@@ -85,6 +88,9 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
     size = len(X)
     train_size = int(train_test_ratio * size)
     test_size = size - train_size
+
+    print('INFO - Train size:', train_size)
+    print('INFO - Test size: ', test_size)
 
 
     train_dataset, test_dataset = random_split(complete_dataset, [train_size, test_size])
@@ -94,12 +100,14 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                   batch_size=batch_size,
                                   shuffle=True,
                                   drop_last=True,
-                                  num_workers=0)
+                                  num_workers=0,
+                                  pin_memory=True)
 
     test_dataloader = DataLoader(test_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
-                                 num_workers=0)
+                                 num_workers=0,
+                                 pin_memory=True)
 
     layer_config = {'local_reparameterization': local_reparameterization,
                     'bias': bias,
@@ -109,12 +117,12 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                     'device': torch.device(device)}
 
 
-    arch = vardl.architectures.build_lenet_mnist(**layer_config)
+    arch = vardl.architectures.build_lenet_mnist(*X.size()[1:], Y.size(1), **layer_config)
 
     model = vardl.models.ClassBayesianNet(architecure=arch)
 
 
-    tb_logger = vardl.logger.TensorboardLogger(logdir)
+    tb_logger = vardl.logger.TensorboardLogger(logdir, model)
     trainer = vardl.trainer.TrainerClassifier(model=model,
                                              train_dataloader=train_dataloader,
                                              test_dataloader=test_dataloader,
@@ -137,19 +145,18 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
     elif init_strategy == 'orthogonal':
         initializer = vardl.initializer.OrthogonalInitializer(model=model)
 
-    #elif init_strategy == 'lsuv':
-    #    continue
-    #    init_dataloader = DataLoader(train_dataset,
-    #                                  batch_size=4,
-    #                                  shuffle=True,
-    #                                  drop_last=True,
-    #                                  num_workers=0)
-    #    initializer = vardl.initializer.LSUVInitializer(model=model,
-    #                                                    tollerance=0.1,
-    #                                                    max_iter=100,
-    #                                                    device=device,
-    #                                                    train_dataloader=init_dataloader)
-    #
+    elif init_strategy == 'lsuv':
+        init_dataloader = DataLoader(train_dataset,
+                                      batch_size=4,
+                                      shuffle=True,
+                                      drop_last=True,
+                                      num_workers=0)
+        initializer = vardl.initializer.LSUVInitializer(model=model,
+                                                        tollerance=0.01,
+                                                        max_iter=1000,
+                                                        device=device,
+                                                        train_dataloader=init_dataloader)
+
     #elif init_strategy == 'blm':
     #    continue
     #    init_dataloader = DataLoader(train_dataset,
@@ -166,6 +173,8 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
         raise ValueError()
 
     initializer.initialize()
+
+    torch.backends.cudnn.benchmark = True
 
     trainer.fit(iterations=iterations,
                 test_interval=test_interval,

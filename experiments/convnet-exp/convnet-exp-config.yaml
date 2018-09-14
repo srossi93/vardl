@@ -1,4 +1,4 @@
-batch_size: 128
+batch_size: 256
 iterations: 100000
 lr: 1e-3
 bias: False
@@ -7,7 +7,7 @@ local_reparameterization: True
 nmc_train: 10
 nmc_test: 10
 random_seed: 0
-train_test_ratio: 0.90
+train_test_ratio: 0.95
 test_interval: 100
 dataset: 'mnist'
 init_strategy: 'orthogonal'
