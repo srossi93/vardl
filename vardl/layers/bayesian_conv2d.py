@@ -30,7 +30,7 @@ class BayesianConv2d(BaseBayesianLayer):
                  out_channels: int,
                  kernel_size: int,
                  stride: int = 1,
-                 padding: int = 1,
+                 padding: int = 0,
                  dilation: int = 1,
                  bias: bool = False,
                  approx: str = 'factorized',
@@ -69,25 +69,25 @@ class BayesianConv2d(BaseBayesianLayer):
         self.out_width = int(
             (self.in_width + 2*self.padding - self.dilation*(self.kernel_size-1) -1)/self.stride + 1)
 
-        self.prior_W = MatrixGaussianDistribution(m=self.filter_size,
-                                                  n=self.out_channels,
+        self.prior_W = MatrixGaussianDistribution(n=self.filter_size,
+                                                  m=self.out_channels,
                                                   approx='factorized',
                                                   dtype=self.dtype,
                                                   device=self.device)
-        self.prior_W.logvars.data.fill_(10)
+        #self.prior_W.logvars.data.fill_(0)
 
-        self.q_posterior_W = MatrixGaussianDistribution(m=self.filter_size,
-                                                        n=self.out_channels,
+        self.q_posterior_W = MatrixGaussianDistribution(n=self.filter_size,
+                                                        m=self.out_channels,
                                                         approx=self.approx,
                                                         dtype=self.dtype,
                                                         device=self.device)
         self.q_posterior_W.optimize(True)
 
 
-        self.unfold_engine = nn.Unfold(kernel_size=self.kernel_size,
-                                       dilation=self.dilation,
-                                       padding=self.padding,
-                                       stride=self.stride)
+        #self.unfold_engine = nn.Unfold(kernel_size=self.kernel_size,
+        #                               dilation=self.dilation,
+        #                               padding=self.padding,
+        #                               stride=self.stride)
 
 
         if self.bias:
@@ -132,7 +132,7 @@ class BayesianConv2d(BaseBayesianLayer):
 
         #print('input', input.size())
 
-        batched_input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
+        #batched_input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
 
         #print('batched_input', batched_input.size())
 
@@ -141,13 +141,13 @@ class BayesianConv2d(BaseBayesianLayer):
         #patches = patches.contiguous().view( -1, self.filter_size)
         #print('patches_after_reshape:', patches.size())
 
-
+        batch_size = input.size(1)
 
         #w_sample = self.q_posterior_W.sample(self.nmc).view(self.nmc, -1)
         #print('w_sample', w_sample.size())
 
         if not self.local_reparameterization:
-            w_sample = self.q_posterior_W.sample(self.nmc).view(-1, self.out_channels, self.in_channels, self.kernel_size,
+            w_sample = self.q_posterior_W.sample(self.nmc).transpose(-1, -2).view(-1, self.out_channels, self.in_channels, self.kernel_size,
                                                         self.kernel_size)
 
             #print('w_sample', w_sample.size())
@@ -162,8 +162,8 @@ class BayesianConv2d(BaseBayesianLayer):
             #
             #output = torch.matmul(patches, w_sample).transpose(-1, -2).contiguous().view(self.nmc, -1, self.out_channels, self.out_height, self.out_width)
 
-            if False:
-                batch_size = input.size(1)
+            if True:
+
                 patches = torch.nn.functional.unfold(input.view(-1, self.in_channels, self.in_height, self.in_width), self.kernel_size,
                                                  padding=self.padding, stride=self.stride, dilation=self.dilation).view(self.nmc, batch_size, self.filter_size, -1)
 
@@ -218,7 +218,7 @@ class BayesianConv2d(BaseBayesianLayer):
 
 
 
-            return output
+            return output.view(self.nmc, batch_size, self.out_channels, self.out_height, self.out_width)
 
 
         raise NotImplementedError

@@ -14,12 +14,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import vardl.initializer  # noqa: F401
-import vardl.layers  # noqa: F401
-import vardl.likelihoods  # noqa: F401
-import vardl.logger   # noqa: F401
-import vardl.models  # noqa: F401
-import vardl.trainer  # noqa: F401
-import vardl.utils  # noqa: F401
-import vardl.distributions  # noqa: F401
-import vardl.architectures  # noqa: F401
+import torch.nn as nn
+
+class View(nn.Module):
+    def __init__(self, nmc_train, nmc_test, *size):
+        super(View, self, ).__init__()
+        self.nmc_train = nmc_train
+        self.nmc_test = nmc_test
+        self.size = size
+        self.train()
+
+
+    def forward(self, x):
+        x = x.contiguous().view(self.nmc, *self.size)
+        return x
+
+    def train(self, mode=True):
+        self.nmc = self.nmc_train if mode else self.nmc_test

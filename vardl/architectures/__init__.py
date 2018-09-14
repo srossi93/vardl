@@ -14,12 +14,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import vardl.initializer  # noqa: F401
-import vardl.layers  # noqa: F401
-import vardl.likelihoods  # noqa: F401
-import vardl.logger   # noqa: F401
-import vardl.models  # noqa: F401
-import vardl.trainer  # noqa: F401
-import vardl.utils  # noqa: F401
-import vardl.distributions  # noqa: F401
-import vardl.architectures  # noqa: F401
+
+from .pytorchnet import build_pytorchnet
+from .lenet import  build_lenet_mnist

@@ -18,3 +18,5 @@
 from .base_bayesian_layer import BaseBayesianLayer
 from .bayesian_linear import BayesianLinear
 from .bayesian_conv2d import BayesianConv2d
+
+from .view import View

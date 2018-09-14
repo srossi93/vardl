@@ -29,7 +29,7 @@ class OrthogonalInitializer(BaseInitializer):
     def __init__(self, model, ):
         super(OrthogonalInitializer, self).__init__(model)
 
-        print('INFO - Initialization with Othogonal Matrix')
+        print('INFO - Initialization with Orthogonal Matrix')
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 

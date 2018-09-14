@@ -164,6 +164,7 @@ class TrainerClassifier():
         test_nell /= len(self.test_dataloader.dataset)
         test_error = test_error/len(self.test_dataloader)
 
+
         #test_error /= len(self.test_dataloader)
 
         print(colored('Test', 'green', attrs=['bold']),
@@ -172,11 +173,29 @@ class TrainerClassifier():
         self.logger.scalar_summary('loss/test', test_nell, self.current_iteration)
         self.logger.scalar_summary('error/test', test_error, self.current_iteration)
 
+        return test_nell, test_error
+
     def fit(self, iterations: int, test_interval: int,
             train_verbose: bool, train_log_interval: int = 1000):
+
+        self.model.architecture[0].q_posterior_W.mean.data.normal_()
+
+        best_test_nell, best_test_error = self.test()
+
         for _ in range(iterations // test_interval):
-            self.test()
+
             self.train_per_iterations(test_interval, train_verbose, train_log_interval)
+
+            test_nell, test_error = self.test()
+            if test_nell < best_test_nell and test_error < best_test_error:
+                print('INFO - Current snapshot (MNLL: %.3f - ERR: %.3f) better than previous (MNLL: %.3f - ERR: %.3f).'
+                      % (test_nell, test_error, best_test_nell, best_test_error))
+                self.logger.save_model()
+                best_test_error = test_error
+                best_test_nell = test_nell
+
+            
+
         self.test()
 
 
