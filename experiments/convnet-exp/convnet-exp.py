@@ -72,28 +72,26 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                    nmc_test, random_seed, train_test_ratio, test_interval, dataset, init_strategy,
                    fold, device, dataset_dir):
 
-    #dataset = 'cifar10'
 
     logdir = './work/%s/%s' % (dataset, init_strategy)
 
-    X, Y = torch.load('%s/%s/complete_%s.pt' % (dataset_dir, dataset, dataset))
+
+    X_train, Y_train = torch.load('%s/%s/train_%s.pt' % (dataset_dir, dataset, dataset))
+    X_test, Y_test = torch.load('%s/%s/test_%s.pt' % (dataset_dir, dataset, dataset))
 
     if dataset == 'mnist':
-        X = X.view(-1, 1, 28, 28)
+        X_train = X_train.view(-1, 1, 28, 28)
+        X_test = X_test.view(-1, 1, 28, 28)
 
 
     vardl.utils.set_seed(random_seed + fold)
 
-    complete_dataset = TensorDataset(X, Y)
-    size = len(X)
-    train_size = int(train_test_ratio * size)
-    test_size = size - train_size
+    train_dataset = TensorDataset(X_train, Y_train)
+    test_dataset = TensorDataset(X_test, Y_test)
 
-    print('INFO - Train size:', train_size)
-    print('INFO - Test size: ', test_size)
-
-
-    train_dataset, test_dataset = random_split(complete_dataset, [train_size, test_size])
+    print('INFO - Dataset: %s' % dataset)
+    print('INFO - Train size:', X_train.size(0))
+    print('INFO - Test size: ', X_test.size(0))
 
 
     train_dataloader = DataLoader(train_dataset,
@@ -117,7 +115,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                     'device': torch.device(device)}
 
 
-    arch = vardl.architectures.build_lenet_mnist(*X.size()[1:], Y.size(1), **layer_config)
+    arch = vardl.architectures.build_lenet_mnist(*X_train.size()[1:], Y_train.size(1), **layer_config)
 
     model = vardl.models.ClassBayesianNet(architecure=arch)
 
@@ -157,17 +155,16 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                                         device=device,
                                                         train_dataloader=init_dataloader)
 
-    #elif init_strategy == 'blm':
-    #    continue
-    #    init_dataloader = DataLoader(train_dataset,
-    #                                  batch_size=256,
-    #                                  shuffle=True,
-    #                                  drop_last=True,
-    #                                  num_workers=0)
-    #    initializer = vardl.initializer.BLMInitializer(model=model,
-    #                                                   train_dataloader=init_dataloader,
-    #                                                   device=device,
-    #                                                   lognoise=0)
+    elif init_strategy == 'blm':
+        init_dataloader = DataLoader(train_dataset,
+                                      batch_size=256,
+                                      shuffle=True,
+                                      drop_last=True,
+                                      num_workers=0)
+        initializer = vardl.initializer.BLMInitializer(model=model,
+                                                       train_dataloader=init_dataloader,
+                                                       device=device,
+                                                       lognoise=0)
 
     else:
         raise ValueError()

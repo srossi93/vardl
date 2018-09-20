@@ -54,24 +54,20 @@ def config():
     device = 'cpu'
     dataset_dir = '~'
 
-ex.add_config('convnet-exp-config.yaml')
+ex.add_config('montecarlo-exp-config.yaml')
 
 
-class View(nn.Module):
-    def __init__(self, *size):
-        super(View, self, ).__init__()
-        self.size = size
+def weights_init(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight.data)
 
-    def forward(self, x):
-        x = x.contiguous().view(self.size)
-        # print('view-output:', x.size())
-        return x
 
 @ex.automain
 def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameterization, nmc_train,
                    nmc_test, random_seed, train_test_ratio, test_interval, dataset, init_strategy,
                    fold, device, dataset_dir):
 
+    torch.set_num_threads(4)
 
     logdir = './work/%s/%s' % (dataset, init_strategy)
 
@@ -98,13 +94,13 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                   batch_size=batch_size,
                                   shuffle=True,
                                   drop_last=True,
-                                  num_workers=0,
+                                  num_workers=1,
                                   pin_memory=True)
 
     test_dataloader = DataLoader(test_dataset,
                                  batch_size=batch_size,
                                  shuffle=False,
-                                 num_workers=0,
+                                 num_workers=1,
                                  pin_memory=True)
 
     layer_config = {'local_reparameterization': local_reparameterization,
@@ -115,20 +111,39 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                     'device': torch.device(device)}
 
 
-    arch = vardl.architectures.build_lenet_mnist(*X_train.size()[1:], Y_train.size(1), **layer_config)
+    if init_strategy == 'mcd':
+        if dataset=='mnist':
+            model = vardl.mcd.LeNetMNC_MNIST(nmc_test=nmc_test)
+        elif dataset == 'cifar10':
+            model = vardl.mcd.LeNetMNC_CIFAR10(nmc_test=nmc_test)
+        else:
+            raise ValueError()
 
-    model = vardl.models.ClassBayesianNet(architecure=arch)
+
+    else:
+        if dataset=='mnist':
+            arch = vardl.architectures.build_lenet_mnist(*X_train.size()[1:], Y_train.size(1), **layer_config)
+        elif dataset == 'cifar10':
+            arch = vardl.architectures.build_lenet_cifar10(*X_train.size()[1:], Y_train.size(1), **layer_config)
+        else:
+            raise ValueError()
+
+        model = vardl.models.ClassBayesianNet(architecure=arch)
+
+    print(model)
 
 
     tb_logger = vardl.logger.TensorboardLogger(logdir, model)
     trainer = vardl.trainer.TrainerClassifier(model=model,
-                                             train_dataloader=train_dataloader,
-                                             test_dataloader=test_dataloader,
-                                             optimizer='Adam',
-                                             optimizer_config={'lr': float(lr)},
-                                             device=device,
-                                             logger=tb_logger,
-                                             seed=random_seed)
+                                              train_dataloader=train_dataloader,
+                                              test_dataloader=test_dataloader,
+                                              #optimizer='SGD',
+                                              #optimizer_config=dict(lr=float(lr), momentum=0.9),
+                                              optimizer='Adam',
+                                              optimizer_config={'lr': float(lr)},
+                                              device=device,
+                                              logger=tb_logger,
+                                              seed=random_seed)
 
 
     if init_strategy == 'uninformative':
@@ -157,21 +172,31 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
 
     elif init_strategy == 'blm':
         init_dataloader = DataLoader(train_dataset,
-                                      batch_size=256,
+                                      batch_size=256,#256
                                       shuffle=True,
                                       drop_last=True,
                                       num_workers=0)
+
+        if dataset == 'mnist':
+            lognoise=-0
+        elif dataset == 'cifar10':
+            lognoise = 3
         initializer = vardl.initializer.BLMInitializer(model=model,
                                                        train_dataloader=init_dataloader,
                                                        device=device,
-                                                       lognoise=0)
+                                                       lognoise=lognoise)
+
+
+    if init_strategy != 'mcd':
+        initializer.initialize()
 
     else:
-        raise ValueError()
-
-    initializer.initialize()
+        model.apply(weights_init)
 
     torch.backends.cudnn.benchmark = True
+
+    #if init_strategy == 'mcd':
+    #    iterations *= 100
 
     trainer.fit(iterations=iterations,
                 test_interval=test_interval,
