@@ -33,5 +33,5 @@ class TensorboardLogger(BaseLogger):
         self.writer.add_scalar(tag, value, step)
 
 
-    def save_model(self):
-        self.model.save_model(self.directory + '/model_snapshot.pth')
+    def save_model(self, extra_info=''):
+        self.model.save_model(self.directory + '/model_snapshot'+extra_info+'.pth')

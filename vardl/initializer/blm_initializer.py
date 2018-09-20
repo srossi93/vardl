@@ -20,6 +20,13 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 
+try:
+    from tqdm import tqdm
+except:
+    def tqdm(f):
+        return f
+
+
 
 from . import BaseInitializer
 from ..layers import BayesianLinear, BayesianConv2d
@@ -55,7 +62,7 @@ class BLMInitializer(BaseInitializer):
             self.train_dataloader_iterator = iter(self.train_dataloader)
             X, Y = next(self.train_dataloader_iterator)
 
-        for out_index in range(out_features):
+        for out_index in tqdm(range(out_features)):
 
             if not out_index % Y.size(1):   # TODO: test if it's correct with multiple output dimensions
                 try:
@@ -75,7 +82,7 @@ class BLMInitializer(BaseInitializer):
                 # - the labels are transformed as Dirichlet variables
                 vv = torch.log(1.0 + 1.0 / (Y + torch.exp(self.log_alpha)))
                 mm = torch.log(Y + torch.exp(self.log_alpha)) - vv / 2.0
-                print('Classification Layer')
+                #print('Classification Layer')
             else:
                 vv = torch.ones_like(Y) * self.lognoise  # -2
                 mm = Y
@@ -84,7 +91,7 @@ class BLMInitializer(BaseInitializer):
                 index = np.random.random_integers(0, Y.size(1) - 1)
 
                 if isinstance(layer, BayesianConv2d):
-                    print('INFO - Extracting patches...')
+                    #print('INFO - Extracting patches...')
                     patches = layer.extract_patches(X).mean(dim=0)
 
 
@@ -112,7 +119,7 @@ class BLMInitializer(BaseInitializer):
                 index = np.random.random_integers(0, Y.size(1) - 1)
 
                 if isinstance(layer, BayesianConv2d):
-                    print('INFO - Extracting patches...')
+                    #print('INFO - Extracting patches...')
                     patches = layer.extract_patches(new_in_data).mean(dim=0)
 
                     #print('INFO - Done (patches size =', *patches.size(), ')')

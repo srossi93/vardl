@@ -31,3 +31,7 @@ class View(nn.Module):
 
     def train(self, mode=True):
         self.nmc = self.nmc_train if mode else self.nmc_test
+
+
+    def __repr__(self):
+        return ""

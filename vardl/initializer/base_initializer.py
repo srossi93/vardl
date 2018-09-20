@@ -34,6 +34,7 @@ class BaseInitializer():
         raise NotImplementedError()
 
     def initialize(self):
+        #self.model.train(True)
         t_start = time()
         for i, layer in self.layers:
             print('INFO - Initialization of layer %d' % i)

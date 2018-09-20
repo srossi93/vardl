@@ -26,26 +26,33 @@ class ExperimentPlotter():
             df = self._get_results_runs(filename_runs)
             self.raw_data[method] = df
 
-    def plot_tag(self, method, tag, ax, label):
+    def plot_tag(self, method, tag, ax, label, linestyle='-'):
         data = self.raw_data[method]
 
         filtered_data = data[data.tag == tag]
+
+
         filtered_data.value = filtered_data.value.where(filtered_data.value <= self.upper_clip, self.upper_clip)
 
+        #print(filtered_data)
+
         aggr_data = filtered_data.groupby('step')
-        
-        
+
+#        aggr_data['value'] = aggr_data['value'].rolling(window=10, min_periods=2, center=True).mean()
+
+#        print(aggr_data)
         #logscale = np.logspace(0, 5, 1000, endpoint=True)
         #print(logscale)
         
         #print(aggr_data.mean())
-
-        steps = aggr_data.mean().index.tolist()
-        means = aggr_data.mean()['value']
-        stds = aggr_data.std()['value']
+        window = 1
+        steps = aggr_data.mean().rolling(window, min_periods=1, center=True).mean().index.tolist()
+        #print(steps)
+        means = aggr_data.mean().rolling(window, min_periods=1, center=True).mean()['value']
+        stds = aggr_data.std().rolling(window, min_periods=1, center=True).mean()['value']
 
         color = next(ax._get_lines.prop_cycler)['color']
-        ax.plot(steps, means, label=label, color=color, alpha=1)
+        ax.plot(steps, means, label=label, color=color, alpha=1, linestyle=linestyle)
         ax.fill_between(steps, means - stds, means + stds, color=color, alpha=0.1)
 
         # return means.tolist(), stds.tolist()
@@ -57,10 +64,15 @@ class ExperimentPlotter():
         for i, tag in enumerate(tags):
 
             for method in self.methods:
+                if method == 'mcd':
+                    linestyle = '--'
+                else:
+                    linestyle = '-'
                 self.plot_tag(method=method,
                               tag=tag,
                               ax=axs[i],
-                              label=method.upper())
+                              label=method.upper(),
+                              linestyle=linestyle)
             axs[i].set_ylim(*ylims[i])
             axs[i].set_xlim(*xlim)
             axs[i].semilogx() if logx else 0
@@ -71,11 +83,14 @@ class ExperimentPlotter():
         axs[-1].set_xlabel('Step')
 
         if save:
-            self._savefig('pdf')
-            self._savefig('tex')
+            path = self.savepath + self.name
+            self.savefig(path, 'pdf')
+            self.savefig(path, 'tex')
+
+        return fig, axs
 
 
-    def write_summary_tex(self, tags):
+    def write_summary_tex(self, tags, step=-1):
         summary = ''
         for tag in tags:
             summary += '==== %s ====\n' % tag.upper()
@@ -86,10 +101,10 @@ class ExperimentPlotter():
                 aggr_data = data[data.tag == tag].groupby('step')
 
                 steps = aggr_data.mean().index.tolist()
-                final_mean = aggr_data.mean()['value'].iloc[-1]
-                final_std = aggr_data.std()['value'].iloc[-1]
+                final_mean = aggr_data.mean()['value'].iloc[step]
+                final_std = aggr_data.std()['value'].iloc[step]
 
-                summary += "%s: $%.4f \\pm %.3f$\n" % (method, final_mean, final_std)
+                summary += "%s: $%.4f \\pm %.3f$ at %d step\n" % (method, final_mean, final_std, steps[step])
 
             summary += '\n\n'
 
@@ -131,8 +146,10 @@ class ExperimentPlotter():
             events.append(dicti)
         return pd.DataFrame(events)
 
-    def _savefig(self, ext='pdf', close=False, verbose=True):
-        path = self.savepath + self.name
+
+    @staticmethod
+    def savefig(path, ext='pdf', close=False, verbose=True):
+        #path = self.savepath + self.name
         import os
         # Extract the directory and filename from the given path
         directory = os.path.split(path)[0]

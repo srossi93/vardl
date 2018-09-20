@@ -199,5 +199,9 @@ class BayesianConv2d(BaseBayesianLayer):
 
 
     def extra_repr(self):
-        return ''
+        return """in_channels=%s, in_height=%s, in_width=%s, 
+out_channels=%s, out_height=%s, out_width=%s, 
+kernel_size=%s, padding=%s""" % (
+            self.in_channels, self.in_height, self.in_width, self.out_channels, self.out_height, self.out_width, self.kernel_size, self.padding
+        )
 

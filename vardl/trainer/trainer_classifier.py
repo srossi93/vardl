@@ -23,7 +23,7 @@ from typing import Dict
 from termcolor import colored
 
 from ..utils import set_seed
-from ..logger import BaseLogger
+from ..logger import BaseLogger, TensorboardLogger
 
 
 class TrainerClassifier():
@@ -36,7 +36,7 @@ class TrainerClassifier():
                  test_dataloader: DataLoader,
                  device: str,
                  seed: int,
-                 logger: BaseLogger=None):
+                 logger: TensorboardLogger=None):
 
         #assert optimizer == 'Adam'
 
@@ -57,8 +57,15 @@ class TrainerClassifier():
         self.test_dataloader = test_dataloader
 
         self.logger = logger
+        self.optimizer_config = optimizer_config
 
         set_seed(seed)
+
+
+        #dummy_input = next(iter(test_dataloader))
+        #print('Add graph')
+        #self.logger.writer.add_graph(self.model, (dummy_input, ), True)
+
 
     def compute_nell(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
                      n: int, m: int) -> torch.Tensor:
@@ -96,6 +103,9 @@ class TrainerClassifier():
         loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
         error = self.compute_error(output, target)
         loss.backward()
+
+        #torch.nn.utils.clip_grad_norm_(self.model.parameters(), 100000)
+
         self.optimizer.step()
 
 
@@ -110,6 +120,7 @@ class TrainerClassifier():
 
             for name, param in self.model.named_parameters():
                 if param.requires_grad:
+                    #pass
                     self.logger.writer.add_histogram(name,
                                                      param.clone().cpu().data.numpy(),
                                                      self.current_iteration)
@@ -120,7 +131,6 @@ class TrainerClassifier():
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
         self.logger.scalar_summary('error/train', error, self.current_iteration)
         self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
-
 
 
 
@@ -185,21 +195,39 @@ class TrainerClassifier():
 
         best_test_nell, best_test_error = self.test()
 
-        for _ in range(iterations // test_interval):
+        try:
+            for _ in range(iterations // test_interval):
 
-            self.train_per_iterations(test_interval, train_verbose, train_log_interval)
+                self.train_per_iterations(test_interval, train_verbose, train_log_interval)
 
-            test_nell, test_error = self.test()
-            if test_nell < best_test_nell and test_error < best_test_error:
-                print('INFO - Current snapshot (MNLL: %.3f - ERR: %.3f) better than previous (MNLL: %.3f - ERR: %.3f).'
+                test_nell, test_error = self.test()
+                if test_nell < best_test_nell and test_error < best_test_error:
+                    print('INFO - Current snapshot (MNLL: %.3f - ERR: %.3f) better than previous (MNLL: %.3f - ERR: %.3f).'
                       % (test_nell, test_error, best_test_nell, best_test_error))
-                self.logger.save_model()
-                best_test_error = test_error
-                best_test_nell = test_nell
+                    self.logger.save_model('_best')
+                    best_test_error = test_error
+                    best_test_nell = test_nell
+
+                # Adjust learning rate
+                self.__adjust_learning_rate()
 
 
+            self.test()
+            self.logger.save_model('_final')
 
-        self.test()
+        except KeyboardInterrupt:
+            print('WARN - Training interruped by user. Saving current model snapshot')
+            self.logger.save_model('_interruped')
+
+
+    def __adjust_learning_rate(self):
+        gamma = 0.0001
+        p = 0.75
+
+        lr = self.optimizer_config['lr'] * ((1 + gamma * self.current_iteration) ** -p)
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr
+        self.logger.scalar_summary('model/lr', lr, self.current_iteration)
 
 
     def fit_log(self, iterations: int, train_verbose):

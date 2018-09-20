@@ -23,3 +23,4 @@ import vardl.trainer  # noqa: F401
 import vardl.utils  # noqa: F401
 import vardl.distributions  # noqa: F401
 import vardl.architectures  # noqa: F401
+import vardl.mcd

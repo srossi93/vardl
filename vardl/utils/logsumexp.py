@@ -21,8 +21,9 @@ import torch
 
 # Log-sum operation
 def logsumexp(vals: torch.Tensor, dim=None) -> torch.Tensor:
-    m = torch.max(vals, dim)[0]
-    if dim is None:
-        return m + torch.log(torch.sum(torch.exp(vals - m), dim))
-    else:
-        return m + torch.log(torch.sum(torch.exp(vals - torch.unsqueeze(m, dim)), dim))
+    return torch.logsumexp(vals, dim)
+    #m = torch.max(vals, dim)[0]
+    #if dim is None:
+    #    return m + torch.log(torch.sum(torch.exp(vals - m), dim))
+    #else:
+    #    return m + torch.log(torch.sum(torch.exp(vals - torch.unsqueeze(m, dim)), dim))

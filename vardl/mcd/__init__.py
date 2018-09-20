@@ -14,7 +14,4 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
-from .pytorchnet import build_pytorchnet
-from .lenet import  build_lenet_mnist
-from .lenet import  build_lenet_cifar10
+from .lenet_nmc import LeNetMNC_MNIST, LeNetMNC_CIFAR10
