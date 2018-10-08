@@ -18,8 +18,8 @@ import torch
 from . import MatrixGaussianDistribution
 
 
-def dkl_matrix_gaussian(p: MatrixGaussianDistribution,
-                        q: MatrixGaussianDistribution) -> torch.Tensor:
+def dkl_matrix_gaussian(q: MatrixGaussianDistribution,
+                        p: MatrixGaussianDistribution) -> torch.Tensor:
     if p.approx == 'factorized' and q.approx == 'factorized':
         return _DKL_gaussian_q_diag_p_diag(q.mean, q.logvars, p.mean, p.logvars)
     else:

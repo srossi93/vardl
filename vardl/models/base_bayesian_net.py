@@ -35,7 +35,7 @@ class BaseBayesianNet(nn.Module):
         total_dkl = 0
         for layer in self.architecture:
             total_dkl += layer.dkl if isinstance(layer, BayesianLinear) or isinstance(layer, BayesianConv2d) else 0
-        return total_dkl
+        return total_dkl# / 50
 
     def save_model(self, path):
         print('INFO - Saving model in %s' % path)

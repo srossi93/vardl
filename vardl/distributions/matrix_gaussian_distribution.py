@@ -68,13 +68,12 @@ class MatrixGaussianDistribution(BaseDistribution):
             # -- parametrized using Log-Cholesky parametrization
             # -- ref. Unconstrained Parameterizations for Variance-Covariance Matrices (p.2)
             self._cov_lower_triangular = nn.Parameter(
-                np.log(1. / self.n) *
                 torch.eye(self.n, self.n,
                           dtype=self.dtype,
                           device=self.device) *
                 torch.ones(self.m, 1, 1,
                            dtype=self.dtype,
-                           device=self.device),
+                           device=self.device) * np.log(1. / self.n),
                 requires_grad=False)
 
         elif self.approx == 'low rank':
@@ -138,12 +137,13 @@ class MatrixGaussianDistribution(BaseDistribution):
             return w_sample
 
         elif self.approx == 'full':
-            w_sample = torch.zeros_like(epsilon_for_W_sample)
+            w_sample = torch.zeros_like(epsilon_for_W_sample, device=self.device)
 
             for i in range(self.m):
                 cov_lower_triangular = torch.tril(self.cov_lower_triangular[i, :, :], -1)
                 L_chol = cov_lower_triangular + \
                     torch.diagflat(torch.exp(self.logvars[i]))
+                print(epsilon_for_W_sample.size())
                 w_sample[:, :, i] = torch.add(torch.matmul(L_chol, epsilon_for_W_sample[:, :, i].t()).t(),
                                               self.mean[:, i])
 
@@ -176,7 +176,17 @@ class MatrixGaussianDistribution(BaseDistribution):
             Y = mean_Y + torch.sqrt(var_Y + 1e-5) * epsilon_for_Y_sample
 
         if self.approx == 'full':
-            pass
+            var_Y = torch.zeros_like(mean_Y, device=self.device) * torch.ones(n_sample, 1, 1, device=self.device)
+            # q_W_conv_L_chol = self._q_W_conv_L_chol
+            for i in range(self.m):
+                cov_lower_triangular = torch.tril(self.cov_lower_triangular[i, :, :], -1)
+                L_chol = cov_lower_triangular + \
+                         torch.diagflat(torch.exp(self.logvars[i]))
+
+                var_Y[:, :, i] = torch.sum(torch.matmul(in_data, L_chol) ** 2, -1)
+
+
+
         if self.approx == 'low-rank':
             pass
         return Y

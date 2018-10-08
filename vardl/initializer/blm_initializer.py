@@ -86,6 +86,8 @@ class BLMInitializer(BaseInitializer):
             else:
                 vv = torch.ones_like(Y) * self.lognoise  # -2
                 mm = Y
+                #mm = (2.0 * Y - 1.0)
+
 
             if layer_index == 0:
                 index = np.random.random_integers(0, Y.size(1) - 1)
@@ -142,18 +144,22 @@ class BLMInitializer(BaseInitializer):
                     vv[:, index])
 
             if layer.approx == 'factorized':
-                blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
+                if layer_index != 0:
+                    blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
+                else:
+                    blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
+
                 layer.q_posterior_W.mean.data[:, out_index] = blm_W_m
                 layer.q_posterior_W.logvars.data[:, out_index] = blm_W_logv
 
             elif layer.approx == 'full':
-                raise NotImplementedError()
-                layer.q_W_m[:, out_index].data.copy_(blm_W_m)
+                #raise NotImplementedError()
+                layer.q_posterior_W.mean.data[:, out_index] = blm_W_m
                 q_chol_L = torch.potrf(blm_W_cov, upper=True).t()
                 blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
                 # layer.q_W_dial_log_L_chol.data.copy_(q_chol_L.diag().log())
-                layer.q_W_dial_log_L_chol.data.copy_(blm_W_logv)
-                layer.q_W_L_chol_Sigma.data.copy_(q_chol_L)
+                layer.q_posterior_W.cov_lower_triangular[out_index] = q_chol_L
+                layer.q_posterior_W.logvars.data[:, out_index] = blm_W_logv
 
 
 def bayesian_linear_model(X: torch.Tensor, Y: torch.Tensor, log_noise: torch.Tensor) -> torch.Tensor:

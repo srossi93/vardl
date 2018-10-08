@@ -9,7 +9,7 @@ nmc_test: 32
 random_seed: 0
 train_test_ratio: 0.95
 test_interval: 1000
-dataset: 'mnist'
+dataset: 'cifar10'
 init_strategy: 'orthogonal'
 fold: 0
 device: 'cuda:0'

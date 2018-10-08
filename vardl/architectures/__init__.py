@@ -18,3 +18,4 @@
 from .pytorchnet import build_pytorchnet
 from .lenet import  build_lenet_mnist
 from .lenet import  build_lenet_cifar10
+from .alexnet import build_alexnet_cifar10

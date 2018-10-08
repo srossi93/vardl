@@ -15,3 +15,4 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from .lenet_nmc import LeNetMNC_MNIST, LeNetMNC_CIFAR10
+from .alexnet_mcd import AlexNetMCD_CIFAR10

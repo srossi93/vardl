@@ -22,11 +22,11 @@ from tensorboardX import SummaryWriter
 
 class TensorboardLogger(BaseLogger):
 
-    def __init__(self, directory: str, model: BaseBayesianNet):
+    def __init__(self, directory: str, model: BaseBayesianNet, extra_info=''):
         super(TensorboardLogger, self).__init__()
 
         self.directory = next_path(directory+'/run-%04d')
-        self.writer = SummaryWriter('%s/' % (self.directory))
+        self.writer = SummaryWriter('%s/' % (self.directory), comment=extra_info)
         self.model = model
 
     def scalar_summary(self, tag, value, step):

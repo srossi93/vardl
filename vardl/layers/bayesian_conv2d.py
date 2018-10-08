@@ -16,6 +16,7 @@ r"""
 """
 import torch
 import torch.nn as nn
+import numpy as np
 from ..distributions import MatrixGaussianDistribution
 from ..distributions import dkl_matrix_gaussian
 from . import BaseBayesianLayer
@@ -74,7 +75,9 @@ class BayesianConv2d(BaseBayesianLayer):
                                                   approx='factorized',
                                                   dtype=self.dtype,
                                                   device=self.device)
-        #self.prior_W.logvars.data.fill_(0)
+
+        #self.prior_W.logvars.data.fill_(0.3)#0.25
+        self.prior_W.logvars.data.fill_(np.log(.005))
 
         self.q_posterior_W = MatrixGaussianDistribution(n=self.filter_size,
                                                         m=self.out_channels,
@@ -82,6 +85,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                         dtype=self.dtype,
                                                         device=self.device)
         self.q_posterior_W.optimize(True)
+        self.prior_W.logvars.requires_grad = True
 
 
         #self.unfold_engine = nn.Unfold(kernel_size=self.kernel_size,
@@ -98,7 +102,8 @@ class BayesianConv2d(BaseBayesianLayer):
 
     @property
     def dkl(self):
-        total_dkl = dkl_matrix_gaussian(self.prior_W, self.q_posterior_W)
+        #total_dkl = dkl_matrix_gaussian(self.prior_W, self.q_posterior_W)
+        total_dkl = dkl_matrix_gaussian(self.q_posterior_W, self.prior_W)
 
         if self.bias:
             raise NotImplementedError()

@@ -30,7 +30,7 @@ from torch.utils.data.dataset import random_split
 
 import torch.nn as nn
 
-ex = Experiment('convnet')
+ex = Experiment('alexnet')
 
 ex.observers.append(FileStorageObserver.create('work'))
 
@@ -54,12 +54,21 @@ def config():
     device = 'cpu'
     dataset_dir = '~'
 
-ex.add_config('montecarlo-exp-config.yaml')
+ex.add_config('alexnet-exp-config.yaml')
 
 
-def weights_init(m):
-    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        torch.nn.init.xavier_uniform_(m.weight.data)
+#def weights_init(m):
+#    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+#        torch.nn.init.xavier_uniform_(m.weight.data)
+
+
+def print_sizes(self, input, output):
+    # input is a tuple of packed inputs
+    # output is a Tensor. output.data is the Tensor we are interested
+    print('Inside ' + self.__class__.__name__ + ' forward')
+    print('input size:', *input[0].size())
+    print('output size:', *output.data.size())
+    print('')
 
 
 @ex.automain
@@ -90,17 +99,18 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
     print('INFO - Test size: ', X_test.size(0))
 
 
+
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=batch_size,
                                   shuffle=True,
                                   drop_last=True,
-                                  num_workers=1,
+                                  num_workers=2,
                                   pin_memory=True)
 
     test_dataloader = DataLoader(test_dataset,
                                  batch_size=64,
                                  shuffle=False,
-                                 num_workers=1,
+                                 num_workers=2,
                                  pin_memory=True)
 
     layer_config = {'local_reparameterization': local_reparameterization,
@@ -112,19 +122,15 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
 
 
     if init_strategy == 'mcd':
-        if dataset=='mnist':
-            model = vardl.mcd.LeNetMNC_MNIST(nmc_test=nmc_test)
-        elif dataset == 'cifar10':
-            model = vardl.mcd.LeNetMNC_CIFAR10(nmc_test=nmc_test)
+        if dataset == 'cifar10':
+            model = vardl.mcd.AlexNetMCD_CIFAR10(nmc_test=nmc_test)
         else:
             raise ValueError()
 
 
     else:
-        if dataset=='mnist':
-            arch = vardl.architectures.build_lenet_mnist(*X_train.size()[1:], Y_train.size(1), **layer_config)
-        elif dataset == 'cifar10':
-            arch = vardl.architectures.build_lenet_cifar10(*X_train.size()[1:], Y_train.size(1), **layer_config)
+        if dataset == 'cifar10':
+            arch = vardl.architectures.build_alexnet_cifar10(*X_train.size()[1:], Y_train.size(1), **layer_config)
         else:
             raise ValueError()
 
@@ -132,37 +138,28 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
 
     print(model)
 
-    if init_strategy == 'mcd':
-        optimizer_config = dict(lr=0.001, weight_decay=0.0005)
-        lr_decay_config = dict(gamma=0.0001, p=0.75)
-    elif init_strategy == 'blm':
-        optimizer_config = dict(lr=float(lr),)
-        lr_decay_config = dict(gamma=0.0001, p=0)
-    else:
-        raise ValueError()
-
-
-    if dataset == 'mnist':
-        prior_optimization = 1000
-    elif dataset == 'cifar10':
-        prior_optimization = 1000
-    else:
-        raise ValueError()
-
+    #hook_handles = []
+    #for m in model.modules():
+    #    hook = m.register_forward_hook(print_sizes)
+    #    hook_handles.append(hook)
+    #
+    #_ = model(torch.randn(16, 3, 32, 32, device='cuda'))
+    #
+    #for hook in hook_handles:
+    #    hook.remove()
 
     tb_logger = vardl.logger.TensorboardLogger(logdir, model)
     trainer = vardl.trainer.TrainerClassifier(model=model,
                                               train_dataloader=train_dataloader,
                                               test_dataloader=test_dataloader,
+                                              #optimizer='SGD',
+                                              #optimizer_config=dict(lr=float(lr), momentum=0.9),
                                               optimizer='Adam',
-                                              optimizer_config=optimizer_config,
-                                              lr_decay_config=lr_decay_config,
+                                              optimizer_config={'lr': float(lr)},
+                                              lr_decay_config=dict(gamma=0.0001, p=0),
                                               device=device,
                                               logger=tb_logger,
-                                              seed=random_seed,
-                                              prior_optimization=prior_optimization)
-
-    print(trainer.optimizer)
+                                              seed=random_seed)
 
 
     if init_strategy == 'uninformative':
@@ -199,7 +196,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
         if dataset == 'mnist':
             lognoise = -0
         elif dataset == 'cifar10':
-            lognoise = 3
+            lognoise = -0
 
         initializer = vardl.initializer.BLMInitializer(model=model,
                                                        train_dataloader=init_dataloader,
@@ -222,4 +219,4 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
     trainer.fit(iterations=iterations,
                 test_interval=test_interval,
                 train_verbose=False,
-                train_log_interval=100)
+                train_log_interval=1000)

@@ -24,7 +24,7 @@ from termcolor import colored
 
 from ..utils import set_seed
 from ..logger import BaseLogger, TensorboardLogger
-
+from ..layers import BaseBayesianLayer
 
 class TrainerClassifier():
 
@@ -36,7 +36,9 @@ class TrainerClassifier():
                  test_dataloader: DataLoader,
                  device: str,
                  seed: int,
-                 logger: TensorboardLogger=None):
+                 logger: TensorboardLogger=None,
+                 lr_decay_config: Dict = None,
+                 prior_optimization: int = 10000):
 
         #assert optimizer == 'Adam'
 
@@ -60,7 +62,9 @@ class TrainerClassifier():
         self.optimizer_config = optimizer_config
 
         set_seed(seed)
+        self.lr_decay_config = lr_decay_config
 
+        self.prior_optimization = prior_optimization
 
         #dummy_input = next(iter(test_dataloader))
         #print('Add graph')
@@ -75,7 +79,7 @@ class TrainerClassifier():
 
     def compute_loss(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
                      n: int, m: int) -> torch.Tensor:
-        return self.compute_nell(Y_pred, Y_true, n, m) + self.model.dkl
+        return self.compute_nell(Y_pred, Y_true, n, m) + (self.model.dkl)
 
     def compute_error(self, Y_pred: torch.Tensor, Y_true: torch.Tensor) -> torch.Tensor:
 
@@ -119,8 +123,8 @@ class TrainerClassifier():
                    error.item(),))
 
             for name, param in self.model.named_parameters():
-                if param.requires_grad:
-                    #pass
+                if param.requires_grad and False:
+
                     self.logger.writer.add_histogram(name,
                                                      param.clone().cpu().data.numpy(),
                                                      self.current_iteration)
@@ -129,10 +133,19 @@ class TrainerClassifier():
                                                      self.current_iteration)
 
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
+        self.logger.scalar_summary('loss/train/nll',
+                                   self.compute_nell(output,
+                                                     target,
+                                                     len(self.train_dataloader.dataset),
+                                                     data.size(0)), self.current_iteration)
         self.logger.scalar_summary('error/train', error, self.current_iteration)
         self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
 
-
+        if self.current_iteration == self.prior_optimization:
+            print('INFO - Priors are now fixed')
+            for child in self.model.modules():
+                if issubclass(type(child), BaseBayesianLayer):
+                    child.prior_W.logvars.requires_grad = False
 
 
     def train_per_iterations(self, iterations: int,
@@ -221,8 +234,8 @@ class TrainerClassifier():
 
 
     def __adjust_learning_rate(self):
-        gamma = 0.0001
-        p = 0.75
+        gamma = self.lr_decay_config['gamma']# 0.0001
+        p = self.lr_decay_config['p']#0#0.75
 
         lr = self.optimizer_config['lr'] * ((1 + gamma * self.current_iteration) ** -p)
         for param_group in self.optimizer.param_groups:

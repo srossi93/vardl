@@ -16,6 +16,7 @@ r"""
 """
 import torch
 import torch.nn as nn
+import numpy as np
 from ..distributions import MatrixGaussianDistribution
 from ..distributions import dkl_matrix_gaussian
 from . import BaseBayesianLayer
@@ -55,7 +56,12 @@ class BayesianLinear(BaseBayesianLayer):
                                                         approx=self.approx,
                                                         dtype=self.dtype,
                                                         device=self.device)
+
+    #    self.prior_W.logvars.data.fill_(np.log(0.05))
+        self.prior_W.logvars.data.fill_(np.log(.005))
+
         self.q_posterior_W.optimize(True)
+        self.prior_W.logvars.requires_grad = True
 
         # -- Scaling factor for weights
         #self.log_scaling_factor = 1 * Parameter(torch.zeros(1, dtype=dtype), requires_grad=True)
@@ -82,10 +88,12 @@ class BayesianLinear(BaseBayesianLayer):
 
     @property
     def dkl(self) -> torch.Tensor:
-        total_dkl = dkl_matrix_gaussian(self.prior_W, self.q_posterior_W)
+        #total_dkl = dkl_matrix_gaussian(self.prior_W, self.q_posterior_W)
+        total_dkl = dkl_matrix_gaussian(self.q_posterior_W, self.prior_W)
 
         if self.bias:
-            raise NotImplementedError()
+            pass
+            #raise NotImplementedError()
 
         return total_dkl
 
@@ -103,11 +111,10 @@ class BayesianLinear(BaseBayesianLayer):
 
         if self.bias:
             epsilon_for_b_sample = torch.randn(self.nmc, self.out_features, dtype=self.dtype,
-                                               requires_grad=False)
-            b_sample = torch.mul(torch.exp(self.log_scaling_factor),
-                                 torch.add(torch.mul(epsilon_for_b_sample,
+                                               requires_grad=False).to(self.device)
+            b_sample = torch.add(torch.mul(epsilon_for_b_sample,
                                                      torch.exp(self.q_b_logv / 2.0)),
-                                           self.q_b_m))
+                                           self.q_b_m)
 
             Y = Y.permute(1, 0, 2)  # Stupid Broadcasting
             Y = torch.add(Y, b_sample)
