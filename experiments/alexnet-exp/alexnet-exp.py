@@ -76,9 +76,9 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                    nmc_test, random_seed, train_test_ratio, test_interval, dataset, init_strategy,
                    fold, device, dataset_dir):
 
-    torch.set_num_threads(6)
+    torch.set_num_threads(8)
 
-    logdir = './work/%s/%s' % (dataset, init_strategy)
+    logdir = './work-lte/%s/%s' % (dataset, init_strategy)
 
 
     X_train, Y_train = torch.load('%s/%s/train_%s.pt' % (dataset_dir, dataset, dataset))
@@ -104,13 +104,13 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                   batch_size=batch_size,
                                   shuffle=True,
                                   drop_last=True,
-                                  num_workers=2,
+                                  num_workers=1,
                                   pin_memory=True)
 
     test_dataloader = DataLoader(test_dataset,
-                                 batch_size=64,
+                                 batch_size=1024,
                                  shuffle=False,
-                                 num_workers=2,
+                                 num_workers=1,
                                  pin_memory=True)
 
     layer_config = {'local_reparameterization': local_reparameterization,
@@ -130,13 +130,15 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
 
     else:
         if dataset == 'cifar10':
-            arch = vardl.architectures.build_alexnet_cifar10(*X_train.size()[1:], Y_train.size(1), **layer_config)
+            #arch = vardl.architectures.build_alexnet_cifar10(*X_train.size()[1:], Y_train.size(1), **layer_config)
+            arch = vardl.architectures.build_alexnet_imagenet(*X_train.size()[1:], Y_train.size(1), **layer_config)
         else:
             raise ValueError()
 
-        model = vardl.models.ClassBayesianNet(architecure=arch)
+        model = vardl.models.ClassBayesianNet(architecure=(arch))
 
-    print(model)
+    parallel_model = model
+    print(parallel_model)
 
     #hook_handles = []
     #for m in model.modules():
@@ -149,7 +151,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
     #    hook.remove()
 
     tb_logger = vardl.logger.TensorboardLogger(logdir, model)
-    trainer = vardl.trainer.TrainerClassifier(model=model,
+    trainer = vardl.trainer.TrainerClassifier(model=parallel_model,
                                               train_dataloader=train_dataloader,
                                               test_dataloader=test_dataloader,
                                               #optimizer='SGD',
@@ -159,7 +161,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                               lr_decay_config=dict(gamma=0.0001, p=0),
                                               device=device,
                                               logger=tb_logger,
-                                              seed=random_seed)
+                                              seed=random_seed, prior_optimization=1)
 
 
     if init_strategy == 'uninformative':
@@ -196,7 +198,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
         if dataset == 'mnist':
             lognoise = -0
         elif dataset == 'cifar10':
-            lognoise = -0
+            lognoise = 1
 
         initializer = vardl.initializer.BLMInitializer(model=model,
                                                        train_dataloader=init_dataloader,

@@ -1,4 +1,4 @@
-batch_size: 512
+batch_size: 1024
 iterations: 1000000
 lr: 5e-4
 bias: False
@@ -12,6 +12,6 @@ test_interval: 1000
 dataset: 'cifar10'
 init_strategy: 'orthogonal'
 fold: 0
-device: 'cuda:0'
+device: 'cuda'
 dataset_dir: '/mnt/workspace/datasets/'
 #dataset_dir: '/home/srossi/research/datasets'

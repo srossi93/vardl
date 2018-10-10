@@ -18,9 +18,8 @@ r"""
 import torch
 import torch.nn as nn
 
-from ..layers import BayesianLinear
-from ..likelihoods import Gaussian
 from . import BaseBayesianNet
+from ..likelihoods import Gaussian
 
 
 class RegrBayesianNet(BaseBayesianNet):

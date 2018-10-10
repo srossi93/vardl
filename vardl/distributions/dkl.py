@@ -15,30 +15,104 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import torch
+
 from . import MatrixGaussianDistribution
 
 
 def dkl_matrix_gaussian(q: MatrixGaussianDistribution,
                         p: MatrixGaussianDistribution) -> torch.Tensor:
+    """
+    Computes the KL divergence between two Matrix Gaussian Distributions
+
+    Parameters
+    ----------
+    q : MatrixGaussianDistribution
+        Approximate distribution
+
+    p : MatrixGaussianDistribution
+        Target distribution
+
+    Returns
+    -------
+    torch.Tensor
+        If successful it returns the divergences between q and p
+
+    Raises
+    -------
+    NotImplementedError
+        If some combinations of approximations are not valid
+
+    """
     if p.approx == 'factorized' and q.approx == 'factorized':
-        return _DKL_gaussian_q_diag_p_diag(q.mean, q.logvars, p.mean, p.logvars)
+        return _dkl_gaussian_q_diag_p_diag(q.mean, q.logvars, p.mean, p.logvars)
+
+    elif p.approx == 'factorized' and q.approx == 'full':
+        total_dkl = 0
+        for i in range(q.m):
+            lower_triang_q = torch.tril(q.cov_lower_triangular[i], -1)
+            lower_triang_q += torch.diagflat(torch.exp(q.logvars[:,i]))
+            total_dkl += _dkl_gaussian_q_full_p_diag(q.mean, lower_triang_q, p.mean, p.logvars)
+        return total_dkl
     else:
         raise NotImplementedError()
 
 
-def _DKL_gaussian_q_diag_p_diag(mq, log_vq, mp, log_vp):
+def _dkl_gaussian_q_diag_p_diag(mq: torch.Tensor,
+                                log_vq: torch.Tensor,
+                                mp: torch.Tensor,
+                                log_vp: torch.Tensor) -> torch.Tensor:
     """
-    KL[q || p]
-    :param mq: vector of means for q
-    :param log_vq: vector of log-variances for q
-    :param mp: vector of means for p
-    :param log_vp: vector of log-variances for p
-    :return: KL divergence between q and p
-    """
-    # print(mq.is_cuda)
-    # print(mp.is_cuda)
-    # print(log_vq.is_cuda)
-    # print(log_vp.is_cuda)
+    Computes the KL divergence when both p and q are fully factorized
 
+    Parameters
+    ----------
+    mq : torch.Tensor
+        means of the approximate Gaussian
+    log_vq : torch.Tensor
+        log variances of the approximate Gaussian
+    mp : torch.Tensor
+        means of the target Gaussian
+    log_vp : torch.Tensor
+        log variances of the target Gaussian
+
+    Returns
+    -------
+    torch.Tensor
+        KL divergence KL(q||p)
+
+    """
     return 0.5 * torch.sum(
         log_vp - log_vq + (torch.pow(mq - mp, 2) * torch.exp(-log_vp)) + torch.exp(log_vq - log_vp) - 1.0)
+
+
+def _dkl_gaussian_q_full_p_diag(mq: torch.Tensor,
+                                lower_triang_q: torch.Tensor,
+                                mp: torch.Tensor,
+                                log_vp: torch.Tensor) -> torch.Tensor:
+    """
+    Computes the KL divergence when p is factorized ad q is with full covariance matrix
+
+    Parameters
+    ----------
+    mq : torch.Tensor
+        means of the approximate Gaussian
+    lower_triang_q: torch.Tensor
+        lower_triangular decomposition of the approximate Gaussian covariance matrix
+    mp : torch.Tensor
+        means of the target Gaussian
+    log_vp : torch.Tensor
+        log variances of the target Gaussian
+
+    Returns
+    -------
+    torch.Tensor
+        KL divergence KL(q||p)
+
+    """
+
+    dimension = mq.size(0)
+
+    return 0.5 * (torch.sum(log_vp) - 2.0 * torch.sum(torch.log(torch.diag(lower_triang_q))) +
+                  torch.sum(torch.mul(torch.pow(mq - mp, 2), torch.exp(-log_vp))) +
+                  torch.sum(torch.diag(torch.mul(torch.exp(-log_vp), torch.matmul(lower_triang_q, lower_triang_q.t())))) -
+                  dimension)

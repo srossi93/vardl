@@ -16,8 +16,9 @@
 
 from time import time
 
-from ..layers import BayesianLinear
 from ..layers import BaseBayesianLayer
+from ..layers import BayesianLinear
+
 
 class BaseInitializer():
     def __init__(self, model):

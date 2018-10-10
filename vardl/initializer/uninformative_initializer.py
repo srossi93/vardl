@@ -15,10 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import torch
-import numpy as np
-
-from torch.utils.data import DataLoader
-
 
 from . import BaseInitializer
 from ..layers import BayesianLinear

@@ -17,7 +17,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as nnf
+
 from ..likelihoods import Softmax
+
 
 class LeNetMNC_MNIST(nn.Module):
 

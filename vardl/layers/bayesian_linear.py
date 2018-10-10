@@ -14,12 +14,13 @@ r"""
    limitations under the License.
 
 """
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
+
+from . import BaseBayesianLayer
 from ..distributions import MatrixGaussianDistribution
 from ..distributions import dkl_matrix_gaussian
-from . import BaseBayesianLayer
 
 
 class BayesianLinear(BaseBayesianLayer):
@@ -58,7 +59,7 @@ class BayesianLinear(BaseBayesianLayer):
                                                         device=self.device)
 
     #    self.prior_W.logvars.data.fill_(np.log(0.05))
-        self.prior_W.logvars.data.fill_(np.log(.005))
+        self.prior_W.logvars.data.fill_(np.log(.001))
 
         self.q_posterior_W.optimize(True)
         self.prior_W.logvars.requires_grad = True
@@ -90,6 +91,7 @@ class BayesianLinear(BaseBayesianLayer):
     def dkl(self) -> torch.Tensor:
         #total_dkl = dkl_matrix_gaussian(self.prior_W, self.q_posterior_W)
         total_dkl = dkl_matrix_gaussian(self.q_posterior_W, self.prior_W)
+
 
         if self.bias:
             pass

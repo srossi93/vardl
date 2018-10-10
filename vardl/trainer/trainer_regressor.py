@@ -15,15 +15,16 @@ r"""
 
 """
 
+from typing import Dict
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
-from typing import Dict
 from termcolor import colored
+from torch.utils.data import DataLoader
 
-from ..utils import set_seed
 from ..logger import BaseLogger
+from ..utils import set_seed
 
 
 class TrainerRegressor():

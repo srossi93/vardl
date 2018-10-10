@@ -17,6 +17,7 @@
 # Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
 import torch
+
 from . import BaseLikelihood
 from .. import utils
 

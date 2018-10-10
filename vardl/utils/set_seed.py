@@ -16,11 +16,13 @@
 # Original code by Karl Krauth
 # Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
-import torch
 import random
+
 import numpy as np
-#import tensorflow as tf
+import torch
+# import tensorflow as tf
 import torch.backends.cudnn
+
 
 # Log-sum operation
 

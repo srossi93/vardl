@@ -18,9 +18,8 @@ r"""
 import torch
 import torch.nn as nn
 
-from ..layers import BayesianLinear
 from ..layers import BayesianConv2d
-from ..likelihoods import Gaussian
+from ..layers import BayesianLinear
 
 
 class BaseBayesianNet(nn.Module):

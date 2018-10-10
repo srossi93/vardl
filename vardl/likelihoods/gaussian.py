@@ -16,9 +16,9 @@
 # Original code by Karl Krauth
 # Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 
 from . import BaseLikelihood
 

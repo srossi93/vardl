@@ -15,9 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 
 from . import BaseDistribution
 
@@ -126,7 +126,7 @@ class MatrixGaussianDistribution(BaseDistribution):
 
     def sample(self, n_samples: int) -> torch.Tensor:
 
-        epsilon_for_W_sample = torch.randn(n_samples, self.n, self.m,      # TODO: Fix this
+        epsilon_for_W_sample = torch.randn(n_samples, self.n, self.m,
                                            dtype=self.dtype,
                                            device=self.device,
                                            requires_grad=False)
@@ -142,15 +142,14 @@ class MatrixGaussianDistribution(BaseDistribution):
             for i in range(self.m):
                 cov_lower_triangular = torch.tril(self.cov_lower_triangular[i, :, :], -1)
                 L_chol = cov_lower_triangular + \
-                    torch.diagflat(torch.exp(self.logvars[i]))
-                print(epsilon_for_W_sample.size())
+                    torch.diagflat(torch.exp(self.logvars[:, i]))
                 w_sample[:, :, i] = torch.add(torch.matmul(L_chol, epsilon_for_W_sample[:, :, i].t()).t(),
                                               self.mean[:, i])
 
             return w_sample
 
         elif self.approx == 'low-rank':
-            pass
+            raise NotImplementedError()
 
         return None
 
@@ -164,7 +163,7 @@ class MatrixGaussianDistribution(BaseDistribution):
         # giving the fact that for a Gaussian posterior on the weights W, also the
         # posterior on the outputs Y conditional to the inputs X is factorized
         # Gaussian as well
-        epsilon_for_Y_sample = torch.zeros(n_sample, in_data.size(-2), self.mean.size(1),  # TODO: fix this
+        epsilon_for_Y_sample = torch.randn(n_sample, in_data.size(-2), self.mean.size(1),  # TODO: fix this
                                            dtype=self.dtype,
                                            device=self.device,
                                            requires_grad=False)
@@ -181,14 +180,17 @@ class MatrixGaussianDistribution(BaseDistribution):
             for i in range(self.m):
                 cov_lower_triangular = torch.tril(self.cov_lower_triangular[i, :, :], -1)
                 L_chol = cov_lower_triangular + \
-                         torch.diagflat(torch.exp(self.logvars[i]))
+                         torch.diagflat(torch.exp(self.logvars[:, i]))
 
                 var_Y[:, :, i] = torch.sum(torch.matmul(in_data, L_chol) ** 2, -1)
 
 
 
         if self.approx == 'low-rank':
-            pass
+            raise NotImplementedError()
+
+
+        Y = mean_Y + torch.sqrt(var_Y + 1e-5) * epsilon_for_Y_sample
         return Y
 
     def extra_repr(self):

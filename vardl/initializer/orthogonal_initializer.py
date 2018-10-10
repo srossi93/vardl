@@ -14,11 +14,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import torch
 import numpy as np
-
-from torch.utils.data import DataLoader
-
+import torch
 
 from . import BaseInitializer
 from ..layers import BayesianLinear

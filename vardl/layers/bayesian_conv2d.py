@@ -14,12 +14,12 @@ r"""
    limitations under the License.
 
 """
-import torch
-import torch.nn as nn
 import numpy as np
+import torch
+
+from . import BaseBayesianLayer
 from ..distributions import MatrixGaussianDistribution
 from ..distributions import dkl_matrix_gaussian
-from . import BaseBayesianLayer
 
 
 class BayesianConv2d(BaseBayesianLayer):
@@ -77,7 +77,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                   device=self.device)
 
         #self.prior_W.logvars.data.fill_(0.3)#0.25
-        self.prior_W.logvars.data.fill_(np.log(.005))
+        self.prior_W.logvars.data.fill_(np.log(.001))
 
         self.q_posterior_W = MatrixGaussianDistribution(n=self.filter_size,
                                                         m=self.out_channels,
@@ -133,7 +133,7 @@ class BayesianConv2d(BaseBayesianLayer):
 
     def forward(self, input):
 
-        input = input * torch.ones(self.nmc, 1, 1, 1, 1).to(self.device)
+        #input = input * torch.ones(self.nmc, 1, 1, 1, 1).to(self.device)
 
         batch_size = input.size(1)
 
@@ -197,7 +197,7 @@ class BayesianConv2d(BaseBayesianLayer):
 
 
 
-            return output.view(self.nmc, batch_size, self.out_channels, self.out_height, self.out_width)
+            return output.view(self.nmc, -1, self.out_channels, self.out_height, self.out_width)
 
 
         raise NotImplementedError

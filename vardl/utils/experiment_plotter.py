@@ -1,10 +1,10 @@
-import tensorflow as tf
 import matplotlib
+import tensorflow as tf
+
 matplotlib.use('agg')
 import matplotlib.pylab as plt
 import glob
 import pandas as pd
-import numpy as np
 
 import matplotlib2tikz
 

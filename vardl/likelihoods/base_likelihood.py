@@ -16,7 +16,6 @@
 # Original code by Karl Krauth
 # Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
-import abc
 import torch
 import torch.nn as nn
 

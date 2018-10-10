@@ -15,16 +15,18 @@ r"""
 
 """
 
+from typing import Dict
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
-from typing import Dict
 from termcolor import colored
+from torch.utils.data import DataLoader
 
-from ..utils import set_seed
-from ..logger import BaseLogger, TensorboardLogger
 from ..layers import BaseBayesianLayer
+from ..logger import TensorboardLogger
+from ..utils import set_seed
+
 
 class TrainerClassifier():
 
@@ -66,9 +68,9 @@ class TrainerClassifier():
 
         self.prior_optimization = prior_optimization
 
-        #dummy_input = next(iter(test_dataloader))
-        #print('Add graph')
-        #self.logger.writer.add_graph(self.model, (dummy_input, ), True)
+        # dummy_input = next(iter(test_dataloader))
+        # print('Add graph')
+        # self.logger.writer.add_graph(self.model, (dummy_input, ), True)
 
 
     def compute_nell(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
@@ -122,15 +124,15 @@ class TrainerClassifier():
                   (self.current_iteration, loss.item(), self.model.dkl.item(),
                    error.item(),))
 
-            for name, param in self.model.named_parameters():
-                if param.requires_grad and False:
-
-                    self.logger.writer.add_histogram(name,
-                                                     param.clone().cpu().data.numpy(),
-                                                     self.current_iteration)
-                    self.logger.writer.add_histogram(name + '.grad',
-                                                     param.grad.clone().cpu().data.numpy(),
-                                                     self.current_iteration)
+            #for name, param in self.model.named_parameters():
+            #    if param.requires_grad and False:
+            #
+            #        self.logger.writer.add_histogram(name,
+            #                                         param.clone().cpu().data.numpy(),
+            #                                         self.current_iteration)
+            #        self.logger.writer.add_histogram(name + '.grad',
+            #                                         param.grad.clone().cpu().data.numpy(),
+            #                                         self.current_iteration)
 
         self.logger.scalar_summary('loss/train', loss, self.current_iteration)
         self.logger.scalar_summary('loss/train/nll',
@@ -252,8 +254,6 @@ class TrainerClassifier():
         """
 
         import math
-        import numpy as np
-
 
         start = 0
         stop = math.ceil(math.log10(iterations))

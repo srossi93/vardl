@@ -14,10 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from . import BaseLogger
-from ..utils import next_path
-from ..models import BaseBayesianNet
 from tensorboardX import SummaryWriter
+
+from . import BaseLogger
+from ..models import BaseBayesianNet
+from ..utils import next_path
 
 
 class TensorboardLogger(BaseLogger):
