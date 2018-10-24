@@ -77,7 +77,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                   device=self.device)
 
         #self.prior_W.logvars.data.fill_(0.3)#0.25
-        self.prior_W.logvars.data.fill_(np.log(.001))
+        self.prior_W.logvars.data.fill_(np.log(.1))
 
         self.q_posterior_W = MatrixGaussianDistribution(n=self.filter_size,
                                                         m=self.out_channels,
@@ -85,7 +85,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                         dtype=self.dtype,
                                                         device=self.device)
         self.q_posterior_W.optimize(True)
-        self.prior_W.logvars.requires_grad = True
+        #self.prior_W.logvars.requires_grad = True
 
 
         #self.unfold_engine = nn.Unfold(kernel_size=self.kernel_size,

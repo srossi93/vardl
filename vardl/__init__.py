@@ -24,3 +24,8 @@ import vardl.utils  # noqa: F401
 import vardl.distributions  # noqa: F401
 import vardl.architectures  # noqa: F401
 import vardl.mcd
+
+
+import logging
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())

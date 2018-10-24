@@ -18,13 +18,14 @@ from time import time
 
 from ..layers import BaseBayesianLayer
 from ..layers import BayesianLinear
-
+import logging
 
 class BaseInitializer():
     def __init__(self, model):
         self.model = model
         self.layers = []
         self._layers_to_initialize()
+        self._logger = logging.getLogger(__name__)
 
     def _layers_to_initialize(self):
         for i, layer in enumerate(self.model.architecture):
@@ -38,10 +39,10 @@ class BaseInitializer():
         #self.model.train(True)
         t_start = time()
         for i, layer in self.layers:
-            print('INFO - Initialization of layer %d' % i)
+            self._logger.info('Initialization of layer %d' % i)
             self._initialize_layer(layer, i)
         t_end = time()
-        print('INFO - Initialization done in %.4f sec.' % (t_end - t_start))
+        self._logger.info('Initialization done in %.4f sec.' % (t_end - t_start))
 
     def __repr__(self):
         return str(self.layers)

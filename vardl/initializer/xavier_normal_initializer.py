@@ -20,13 +20,15 @@ import torch
 from . import BaseInitializer
 from ..layers import BayesianLinear
 
+import logging
 
 class XavierNormalInitializer(BaseInitializer):
 
     def __init__(self, model):
         super(XavierNormalInitializer, self).__init__(model)
 
-        print('INFO - Initialization with Xavier-Normal')
+        self._logger = logging.getLogger(__name__)
+        self._logger.info('Initialization with Xavier-Normal')
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 

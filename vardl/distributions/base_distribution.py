@@ -21,7 +21,7 @@ class BaseDistribution(nn.Module):
     #    __metaclass__ = abc.ABCMeta
 
     #    @abc.abstractclassmethod
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super(BaseDistribution, self).__init__()
         NotImplementedError("Subclass should implement this.")
 

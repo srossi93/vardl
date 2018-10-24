@@ -19,14 +19,15 @@ import torch
 
 from . import BaseInitializer
 from ..layers import BayesianLinear
-
+import logging
 
 class OrthogonalInitializer(BaseInitializer):
 
     def __init__(self, model, ):
         super(OrthogonalInitializer, self).__init__(model)
+        self._logger = logging.getLogger(__name__)
 
-        print('INFO - Initialization with Orthogonal Matrix')
+        self._logger.info('Initialization with Orthogonal Matrix')
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 
@@ -39,6 +40,7 @@ class OrthogonalInitializer(BaseInitializer):
                     layer.q_posterior_W.logvars) * np.log(var))
 
         elif layer.approx == 'full':
+            return
             raise NotImplementedError()
         else:
             raise NotImplementedError()

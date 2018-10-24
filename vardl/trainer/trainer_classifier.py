@@ -26,7 +26,7 @@ from torch.utils.data import DataLoader
 from ..layers import BaseBayesianLayer
 from ..logger import TensorboardLogger
 from ..utils import set_seed
-
+import logging
 
 class TrainerClassifier():
 
@@ -44,8 +44,14 @@ class TrainerClassifier():
 
         #assert optimizer == 'Adam'
 
+        self._logger = logging.getLogger(__name__)
         self.device = device
         self.model = model.to(self.device)
+
+        self._logger.info('Parameters to optimize:')
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                self._logger.info('  %s' % name)
 
         if optimizer == 'Adam':
             self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
@@ -60,7 +66,7 @@ class TrainerClassifier():
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
 
-        self.logger = logger
+        self.tb_logger = logger
         self.optimizer_config = optimizer_config
 
         set_seed(seed)
@@ -114,41 +120,40 @@ class TrainerClassifier():
 
         self.optimizer.step()
 
-
         # -- Reporting to stdout and to the logger (i.e. tensorboard)
-
         if self.current_iteration % train_log_interval == 0:
             if train_verbose:
-                print(colored('Train', 'blue', attrs=['bold']),
-                  "|| iter=%5d   loss=%10.0f  dkl=%8.0f  error=%.2f " %
-                  (self.current_iteration, loss.item(), self.model.dkl.item(),
-                   error.item(),))
+                self._logger.debug('Train: iter=%5d  loss=%01.03e  dkl=%01.03e  error=%.2f ' %
+                                   (self.current_iteration, loss.item(), self.model.dkl.item(), error.item()))
 
             #for name, param in self.model.named_parameters():
-            #    if param.requires_grad and False:
-            #
+            #    if param.requires_grad:
             #        self.logger.writer.add_histogram(name,
             #                                         param.clone().cpu().data.numpy(),
-            #                                         self.current_iteration)
+            #                                         self.current_iteration, )
             #        self.logger.writer.add_histogram(name + '.grad',
             #                                         param.grad.clone().cpu().data.numpy(),
-            #                                         self.current_iteration)
+            #                                         self.current_iteration, )
 
-        self.logger.scalar_summary('loss/train', loss, self.current_iteration)
-        self.logger.scalar_summary('loss/train/nll',
-                                   self.compute_nell(output,
+        self.tb_logger.scalar_summary('loss/train', loss, self.current_iteration)
+        self.tb_logger.scalar_summary('loss/train/nll',
+                                      self.compute_nell(output,
                                                      target,
                                                      len(self.train_dataloader.dataset),
                                                      data.size(0)), self.current_iteration)
-        self.logger.scalar_summary('error/train', error, self.current_iteration)
-        self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
+        self.tb_logger.scalar_summary('error/train', error, self.current_iteration)
+        self.tb_logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
 
-        if self.current_iteration == self.prior_optimization:
-            print('INFO - Priors are now fixed')
-            for child in self.model.modules():
-                if issubclass(type(child), BaseBayesianLayer):
-                    child.prior_W.logvars.requires_grad = False
-
+#        if self.current_iteration % self.prior_optimization:
+#            #print('INFO - Updating priors')
+#            for child in self.model.modules():
+#                if issubclass(type(child), BaseBayesianLayer):
+#                    new_prior_mean = child.q_posterior_W._mean.data.mean()
+#                    new_prior_var = (child.q_posterior_W._logvars.data.exp() + torch.pow((child.prior_W._mean.data -
+#                                                                                   child.q_posterior_W._mean.data),
+#                                                                                         2)).mean()
+#                    child.prior_W._mean.data.fill_(new_prior_mean)
+#                    child.prior_W._logvars.data.fill_(torch.log(new_prior_var))
 
     def train_per_iterations(self, iterations: int,
                              train_verbose: bool, train_log_interval: int):
@@ -161,7 +166,7 @@ class TrainerClassifier():
             try:
                 data, target = next(dataloader_iterator)
             except BaseException:
-                del dataloader_iterator
+                #del dataloader_iterator
                 dataloader_iterator = iter(self.train_dataloader)
                 data, target = next(dataloader_iterator)
                 self.current_epoch += 1
@@ -175,7 +180,7 @@ class TrainerClassifier():
             for batch_idx, (data, target) in enumerate(self.train_dataloader):
                 self.train_batch(data, target)
 
-    def test(self):
+    def test(self, verbose=True):
         self.model.eval()
         test_nell = 0
         test_error = 0
@@ -190,18 +195,16 @@ class TrainerClassifier():
                 #test_correct += self.compute_error(output, target)#
                 test_error += self.compute_error(output, target)#
 
-
         test_nell /= len(self.test_dataloader.dataset)
         test_error = test_error/len(self.test_dataloader)
 
-
         #test_error /= len(self.test_dataloader)
+        if verbose:
+            self._logger.info('Test: iter=%5d   mnll=%01.03e   error=%8.3f' %
+                              (self.current_iteration, test_nell.item(), test_error.item()))
 
-        print(colored('Test', 'green', attrs=['bold']),
-              " || iter=%5d   mnll=%10.3f   error=%8.3f" % (self.current_iteration, test_nell.item(), test_error.item()))
-
-        self.logger.scalar_summary('loss/test', test_nell, self.current_iteration)
-        self.logger.scalar_summary('error/test', test_error, self.current_iteration)
+        self.tb_logger.scalar_summary('loss/test', test_nell, self.current_iteration)
+        self.tb_logger.scalar_summary('error/test', test_error, self.current_iteration)
 
         return test_nell, test_error
 
@@ -217,22 +220,22 @@ class TrainerClassifier():
 
                 test_nell, test_error = self.test()
                 if test_nell < best_test_nell and test_error < best_test_error:
-                    print('INFO - Current snapshot (MNLL: %.3f - ERR: %.3f) better than previous (MNLL: %.3f - ERR: %.3f).'
-                      % (test_nell, test_error, best_test_nell, best_test_error))
-                    self.logger.save_model('_best')
+                    self._logger.info('Current snapshot (MNLL: %.3f - ERR: %.3f) better than previous.' %
+                                      (test_nell, test_error))
+                    self.tb_logger.save_model('_best')
                     best_test_error = test_error
                     best_test_nell = test_nell
 
                 # Adjust learning rate
                 self.__adjust_learning_rate()
 
-
-            self.test()
-            self.logger.save_model('_final')
+            test_nell, test_error = self.test()
+            self.tb_logger.save_model('_final')
+            return test_nell, test_error
 
         except KeyboardInterrupt:
-            print('WARN - Training interruped by user. Saving current model snapshot')
-            self.logger.save_model('_interruped')
+            self._logger.warning('Training interruped by user. Saving current model snapshot')
+            self.tb_logger.save_model('_interruped')
 
 
     def __adjust_learning_rate(self):
@@ -242,39 +245,5 @@ class TrainerClassifier():
         lr = self.optimizer_config['lr'] * ((1 + gamma * self.current_iteration) ** -p)
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
-        self.logger.scalar_summary('model/lr', lr, self.current_iteration)
+        self.tb_logger.scalar_summary('model/lr', lr, self.current_iteration)
 
-
-    def fit_log(self, iterations: int, train_verbose):
-        """
-        Train and test in logspace
-        For instance: at it: 100, 200, ..., 1000, 2000, ... 10000, 20000
-
-        :return:
-        """
-
-        import math
-
-        start = 0
-        stop = math.ceil(math.log10(iterations))
-        #print(stop)
-
-        list_of_steps = []
-        for d in range(0, stop - start):
-            for i in range(10):
-                list_of_steps.append(10 ** d)
-        #list_of_steps.append(10 ** stop)
-
-        #print(list_of_steps)
-
-
-
-        for step in list_of_steps:
-            self.test()
-            self.train_per_iterations(iterations=step,
-                                          train_verbose=train_verbose,
-                                          train_log_interval=step)
-
-
-
-        self.test()

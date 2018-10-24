@@ -18,14 +18,13 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+import logging
 
 try:
     from tqdm import tqdm
 except:
     def tqdm(f):
         return f
-
-
 
 from . import BaseInitializer
 from ..layers import BayesianLinear, BayesianConv2d
@@ -44,8 +43,9 @@ class BLMInitializer(BaseInitializer):
         self.device = device
         self.lognoise = lognoise * torch.ones(1, device=self.device)
         self.log_alpha = logalpha * torch.ones(1, device=self.device)
+        self._logger = logging.getLogger(__name__)
 
-        print('INFO - Initialization with BayesianLinear Model')
+        self._logger.info('Initialization with BayesianLinear Model')
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 

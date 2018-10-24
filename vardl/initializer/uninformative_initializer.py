@@ -19,13 +19,15 @@ import torch
 from . import BaseInitializer
 from ..layers import BayesianLinear
 
+import logging
 
 class UninformativeInitializer(BaseInitializer):
 
     def __init__(self, model, ):
         super(UninformativeInitializer, self).__init__(model)
-        print('INFO - Initialization with Uninformative posterior')
 
+        self._logger = logging.getLogger(__name__)
+        self._logger.info('Initialization with Uninformative posterior')
     def _initialize_layer(self, layer: BayesianLinear, layer_index:int = None):
 
         layer.q_posterior_W.mean = torch.zeros_like(layer.q_posterior_W.mean)

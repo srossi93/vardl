@@ -23,16 +23,16 @@ from ..utils import next_path
 
 class TensorboardLogger(BaseLogger):
 
-    def __init__(self, directory: str, model: BaseBayesianNet, extra_info=''):
+    def __init__(self, directory: str, model: BaseBayesianNet, path = None):
         super(TensorboardLogger, self).__init__()
 
-        self.directory = next_path(directory+'/run-%04d')
-        self.writer = SummaryWriter('%s/' % (self.directory), comment=extra_info)
+        if path == None:
+            self.directory = next_path(directory + '/run-%04d')
+        else:
+            self.directory = path
+        self.writer = SummaryWriter('%s/' % self.directory)
         self.model = model
 
     def scalar_summary(self, tag, value, step):
         self.writer.add_scalar(tag, value, step)
 
-
-    def save_model(self, extra_info=''):
-        self.model.save_model(self.directory + '/model_snapshot'+extra_info+'.pth')

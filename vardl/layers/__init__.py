@@ -20,3 +20,4 @@ from .bayesian_linear import BayesianLinear
 from .bayesian_conv2d import BayesianConv2d
 
 from .view import View
+from .beta_dropout import BetaDropout

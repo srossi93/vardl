@@ -20,24 +20,45 @@ import torch
 import torch.nn as nn
 
 from . import BaseDistribution
+import logging
+
+
+
 
 
 class MatrixGaussianDistribution(BaseDistribution):
 
-    def __init__(self, n: int, m: int, approx: str,
-                 dtype: torch.dtype, device: torch.device):
-        r"""
-
-        Args:
-            n (int): Number of rows (input features)
-            m (int): Number of cols (output features)
-            approx (str): Covariance approximantion (factorized, full or low-rank)
-            dtype (torch.dtype): Datatype
-            device (torch.device): Device (cpu/cuda)
+    def __init__(self,
+                 n: int,
+                 m: int,
+                 approx: str = 'factorized',
+                 dtype: torch.dtype = torch.float32,
+                 device: str = 'cpu') -> None:
         """
+        Distribution class for Matrix Gaussian
 
+        Parameters
+        ----------
+        n : int
+            number of input features
+        m : int
+            number of output features
+        approx : str ('factorized')
+            approximation of the covariance matrix.
+            Possible alternatives are 'factorized' (for diagonal covariance), 'full' and 'low-rank'
+        dtype : torch.dtype (torch.float32)
+            Data type for samples
+        device : str ('cpu')
+            Device on which samples will be stored ('cpu' or 'cuda')
+
+        Raises
+        --------
+        ValueError
+            If sanity checks fail
+        """
         super(MatrixGaussianDistribution, self).__init__()
 
+        self._logger = logging.getLogger(__name__)
         if n <= 0:
             raise ValueError("N should be positive")
         if m <= 0:
@@ -88,6 +109,8 @@ class MatrixGaussianDistribution(BaseDistribution):
                                                          device=self.device),
                                               requires_grad=False)
 
+        return
+
     @property
     def mean(self):
         return self._mean
@@ -125,33 +148,42 @@ class MatrixGaussianDistribution(BaseDistribution):
             param.requires_grad = train
 
     def sample(self, n_samples: int) -> torch.Tensor:
+        """
+        Samples from the current distribution
 
-        epsilon_for_W_sample = torch.randn(n_samples, self.n, self.m,
+        Parameters
+        ----------
+        n_samples : int
+            Number of independent samples
+
+        Return
+        -------
+        torch.Tensor
+            Tensor of samples with shape [n_samples, n, m]
+        """
+
+        epsilon_for_samples = torch.randn(n_samples, self.n, self.m,
                                            dtype=self.dtype,
                                            device=self.device,
                                            requires_grad=False)
         if self.approx == 'factorized':
-            w_sample = torch.add(torch.mul(epsilon_for_W_sample,
+            samples = torch.add(torch.mul(epsilon_for_samples,
                                            torch.exp(self.logvars / 2.0)),
                                  self.mean)
-            return w_sample
 
         elif self.approx == 'full':
-            w_sample = torch.zeros_like(epsilon_for_W_sample, device=self.device)
+            samples = torch.zeros_like(epsilon_for_samples, device=self.device)
 
             for i in range(self.m):
                 cov_lower_triangular = torch.tril(self.cov_lower_triangular[i, :, :], -1)
-                L_chol = cov_lower_triangular + \
-                    torch.diagflat(torch.exp(self.logvars[:, i]))
-                w_sample[:, :, i] = torch.add(torch.matmul(L_chol, epsilon_for_W_sample[:, :, i].t()).t(),
+                cov_lower_triangular += torch.diagflat(torch.exp(self.logvars[:, i]))
+                samples[:, :, i] = torch.add(torch.matmul(cov_lower_triangular, epsilon_for_samples[:, :, i].t()).t(),
                                               self.mean[:, i])
-
-            return w_sample
 
         elif self.approx == 'low-rank':
             raise NotImplementedError()
 
-        return None
+        return samples
 
     def sample_local_repr(self, n_sample: int, in_data: torch.Tensor) -> torch.Tensor:
         # For stochastic gradient optimization, high variance in the gradient

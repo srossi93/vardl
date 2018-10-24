@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import logging
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -34,7 +35,8 @@ class LSUVInitializer(BaseInitializer):
         self.max_iter = max_iter
         self.device = device
 
-        print('INFO - Initialization with LSUV')
+        self._logger = logging.getLogger(__name__)
+        self._logger.info('Initialization with LSUV')
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int):
 
@@ -86,8 +88,8 @@ class LSUVInitializer(BaseInitializer):
             layer_output = cut_model(data)
             current_output_variance = layer_output.var()
 
-        print('INFO - Variance at layer %d (iter #%d): %.3f' %
-              (layer_index, step, current_output_variance.cpu()))
+        self._logger.info('Variance at layer %d (iter #%d): %.3f' %
+                          (layer_index, step, current_output_variance.cpu()))
 
         in_features = layer.q_posterior_W.n
         out_features = layer.q_posterior_W.m

@@ -26,7 +26,7 @@ def build_lenet_mnist(in_channel, in_height, in_width, out_labels, **config):
                            padding=0,
                            **config)
 
-    conv2 = BayesianConv2d(in_channels=20,
+    conv2 = BayesianConv2d(in_channels=conv1.out_channels,
                            in_height=conv1.out_height//2,
                            in_width=conv1.out_width//2,
                            kernel_size=5,
@@ -34,7 +34,7 @@ def build_lenet_mnist(in_channel, in_height, in_width, out_labels, **config):
                            out_channels=50,
                            **config)
 
-    fc1 = BayesianLinear(in_features=(50 * conv2.out_height//2 * conv2.out_width//2),
+    fc1 = BayesianLinear(in_features=(conv2.out_channels * conv2.out_height//2 * conv2.out_width//2),
                        out_features=500,
                        **config)
 
@@ -47,16 +47,16 @@ def build_lenet_mnist(in_channel, in_height, in_width, out_labels, **config):
         conv1,
         nn.ReLU(),
 
-        View(-1, -1, 20, conv1.out_height, conv1.out_width),
+        View(-1, -1, conv1.out_channels, conv1.out_height, conv1.out_width),
         nn.MaxPool2d(kernel_size=2),
-        View(nmc_train, nmc_test, -1, 20, conv1.out_height//2, conv1.out_width//2),
+        View(nmc_train, nmc_test, -1, conv1.out_channels, conv1.out_height//2, conv1.out_width//2),
 
         conv2,
         nn.ReLU(),
 
-        View(-1, -1, 50, conv2.out_height, conv2.out_width),
+        View(-1, -1, conv2.out_channels, conv2.out_height, conv2.out_width),
         nn.MaxPool2d(kernel_size=2),
-        View(nmc_train, nmc_test, -1, 50 * conv2.out_height//2 * conv2.out_width//2),
+        View(nmc_train, nmc_test, -1, conv2.out_channels * conv2.out_height//2 * conv2.out_width//2),
 
         fc1,
         nn.ReLU(),

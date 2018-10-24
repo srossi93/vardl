@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
+import logging
 import torch
 
 from . import BaseInitializer
@@ -26,7 +27,8 @@ class HeuristicInitializer(BaseInitializer):
     def __init__(self, model):
         super(HeuristicInitializer, self).__init__(model)
 
-        print('INFO - Initialization with Heuristic')
+        self._logger = logging.getLogger(__name__)
+        self._logger.info('Initialization with Heuristic')
 
     def _initialize_layer(self, layer: BayesianLinear, layer_index: int = None):
 

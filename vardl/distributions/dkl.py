@@ -47,11 +47,13 @@ def dkl_matrix_gaussian(q: MatrixGaussianDistribution,
         return _dkl_gaussian_q_diag_p_diag(q.mean, q.logvars, p.mean, p.logvars)
 
     elif p.approx == 'factorized' and q.approx == 'full':
+        #print('INFO - KL_d')
         total_dkl = 0
         for i in range(q.m):
             lower_triang_q = torch.tril(q.cov_lower_triangular[i], -1)
             lower_triang_q += torch.diagflat(torch.exp(q.logvars[:,i]))
-            total_dkl += _dkl_gaussian_q_full_p_diag(q.mean, lower_triang_q, p.mean, p.logvars)
+            total_dkl += _dkl_gaussian_q_full_p_diag(q.mean[:, i], lower_triang_q, p.mean[:, i], p.logvars[:, i])
+            del lower_triang_q
         return total_dkl
     else:
         raise NotImplementedError()
@@ -113,6 +115,8 @@ def _dkl_gaussian_q_full_p_diag(mq: torch.Tensor,
     dimension = mq.size(0)
 
     return 0.5 * (torch.sum(log_vp) - 2.0 * torch.sum(torch.log(torch.diag(lower_triang_q))) +
-                  torch.sum(torch.mul(torch.pow(mq - mp, 2), torch.exp(-log_vp))) +
-                  torch.sum(torch.diag(torch.mul(torch.exp(-log_vp), torch.matmul(lower_triang_q, lower_triang_q.t())))) -
+                  torch.sum(torch.mul(torch.pow(mq - mp, 2),
+                                      torch.exp(-log_vp))) +
+                  torch.sum(torch.diag(torch.mul(torch.exp(-log_vp),
+                                                 torch.matmul(lower_triang_q, lower_triang_q.t())))) -
                   dimension)

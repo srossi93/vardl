@@ -23,6 +23,7 @@ class BaseLogger:
 
     @abc.abstractmethod
     def __int__(self, directory: str):
+        self.directory = directory
         raise NotImplementedError("Subclass should implement this.")
 
     @abc.abstractmethod
@@ -36,3 +37,7 @@ class BaseLogger:
     @abc.abstractmethod
     def histo_summary(self, tag, values, step, bins=1000):
         raise NotImplementedError("Subclass should implement this.")
+
+
+    def save_model(self, extra_info=''):
+        self.model.save_model(self.directory + '/model_snapshot'+extra_info+'.pth')

@@ -59,10 +59,10 @@ class BayesianLinear(BaseBayesianLayer):
                                                         device=self.device)
 
     #    self.prior_W.logvars.data.fill_(np.log(0.05))
-        self.prior_W.logvars.data.fill_(np.log(.001))
+        self.prior_W.logvars.data.fill_(np.log(.1))
 
         self.q_posterior_W.optimize(True)
-        self.prior_W.logvars.requires_grad = True
+        #self.prior_W.logvars.requires_grad = True
 
         # -- Scaling factor for weights
         #self.log_scaling_factor = 1 * Parameter(torch.zeros(1, dtype=dtype), requires_grad=True)
