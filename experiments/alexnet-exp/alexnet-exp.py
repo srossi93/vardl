@@ -108,7 +108,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                   pin_memory=True)
 
     test_dataloader = DataLoader(test_dataset,
-                                 batch_size=1024,
+                                 batch_size=128,
                                  shuffle=False,
                                  num_workers=1,
                                  pin_memory=True)
@@ -130,8 +130,8 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
 
     else:
         if dataset == 'cifar10':
-            #arch = vardl.architectures.build_alexnet_cifar10(*X_train.size()[1:], Y_train.size(1), **layer_config)
-            arch = vardl.architectures.build_alexnet_imagenet(*X_train.size()[1:], Y_train.size(1), **layer_config)
+            arch = vardl.architectures.build_alexnet_cifar10(*X_train.size()[1:], Y_train.size(1), **layer_config)
+            #arch = vardl.architectures.build_alexnet_imagenet(*X_train.size()[1:], Y_train.size(1), **layer_config)
         else:
             raise ValueError()
 
@@ -216,7 +216,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
 
     #if init_strategy == 'mcd':
     #    iterations *= 100
-    trainer.logger.save_model("_after_init")
+    #trainer.logger.save_model("_after_init")
 
     trainer.fit(iterations=iterations,
                 test_interval=test_interval,
