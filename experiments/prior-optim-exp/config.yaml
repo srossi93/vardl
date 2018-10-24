@@ -1,0 +1,30 @@
+# ***** General *****
+name: 'prior-optimization'
+outdir: './work'
+seed: 1234
+
+# ***** Dataset *****
+fold: 0
+dataset: mnist
+dataset_dir: '/home/srossi/research/datasets'
+batch_size: 64
+
+# ***** Model *****
+svi: blm-init
+bias: False
+approx: factorized
+local_reparameterization: True
+nmc_train: 1
+nmc_test: 16
+
+# ***** Trainer *****
+lr: 0.0005
+iterations: 1000
+device: cpu
+
+# ***** Logging *****
+test_interval: 1000
+test_verbose: True
+train_verbose: False
+
+
