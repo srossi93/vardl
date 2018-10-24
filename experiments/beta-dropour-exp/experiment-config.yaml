@@ -1,0 +1,15 @@
+batch_size: 64
+iterations: 1000000
+lr: 5e-4
+bias: False
+approx: 'factorized'
+local_reparameterization: True
+nmc_train: 1
+nmc_test: 8
+random_seed: 0
+test_interval: 1000
+dataset: 'mnist'
+dropout: 'beta'
+fold: 0
+device: 'cuda'
+dataset_dir: '/mnt/workspace/datasets/'
