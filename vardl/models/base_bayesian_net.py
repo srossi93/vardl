@@ -23,6 +23,7 @@ import torch.nn as nn
 from ..layers import BayesianConv2d
 from ..layers import BayesianLinear
 
+import logging
 
 class BaseBayesianNet(nn.Module):
 
@@ -30,6 +31,7 @@ class BaseBayesianNet(nn.Module):
         super(BaseBayesianNet, self).__init__()
         self.architecture = None
         self.likelihood = None
+        self._logger = logging.getLogger(__name__)
 
     @property
     def dkl(self):
@@ -42,10 +44,10 @@ class BaseBayesianNet(nn.Module):
         return humanize.intword(sum(p.numel() for p in self.parameters() if p.requires_grad))
 
     def save_model(self, path):
-        print('INFO - Saving model in %s' % path)
+        self._logger.info('Saving model in %s' % path)
         torch.save(self.state_dict(), path)
-        print('INFO - Model saved (%s)' % humanize.naturalsize(os.path.getsize(path), gnu=True))
+        self._logger.info('Model saved (%s)' % humanize.naturalsize(os.path.getsize(path), gnu=True))
 
     def load_model(self, path):
-        print('INFO - Loading model from %s' % path)
+        self._logger.info('Loading model from %s' % path)
         self.load_state_dict(torch.load(path, map_location='cuda'))

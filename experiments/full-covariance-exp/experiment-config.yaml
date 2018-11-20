@@ -1,8 +1,8 @@
-batch_size: 256
-iterations: 10000000
+batch_size: 1024
+iterations: 1000000
 lr: 5e-4
 bias: False
-approx: 'factorized'
+approx: 'full'
 local_reparameterization: True
 nmc_train: 1
 nmc_test: 32
@@ -10,7 +10,7 @@ random_seed: 0
 train_test_ratio: 0.95
 test_interval: 1000
 dataset: 'cifar10'
-init_strategy: 'blm'
+init_strategy: 'orthogonal'
 fold: 0
 device: 'cuda'
 dataset_dir: '/mnt/workspace/datasets/'

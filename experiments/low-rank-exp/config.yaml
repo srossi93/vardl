@@ -1,5 +1,5 @@
 # ***** General *****
-name: 'prior-optimization'
+name: 'low-rank covariance'
 outdir: './workspace'
 seed: 0
 
@@ -12,7 +12,8 @@ batch_size: 64
 # ***** Model *****
 svi: blm-init
 bias: False
-approx: factorized
+approx: low-rank
+rank: 2
 local_reparameterization: True
 nmc_train: 1
 nmc_test: 16

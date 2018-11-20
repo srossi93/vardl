@@ -55,6 +55,15 @@ def dkl_matrix_gaussian(q: MatrixGaussianDistribution,
             total_dkl += _dkl_gaussian_q_full_p_diag(q.mean[:, i], lower_triang_q, p.mean[:, i], p.logvars[:, i])
             del lower_triang_q
         return total_dkl
+    elif p.approx == 'factorized' and q.approx == 'low-rank':
+        total_dkl = 0
+        for i in range(q.m):
+            total_dkl += _dkl_gaussian_q_lowrank_p_diag(q.mean[:, i],
+                                                        q.cov_low_rank[i],
+                                                        q.logvars[:, i],
+                                                        p.mean[:, i],
+                                                        p.logvars[:, i])
+        return total_dkl
     else:
         raise NotImplementedError()
 
@@ -117,6 +126,30 @@ def _dkl_gaussian_q_full_p_diag(mq: torch.Tensor,
     return 0.5 * (torch.sum(log_vp) - 2.0 * torch.sum(torch.log(torch.diag(lower_triang_q))) +
                   torch.sum(torch.mul(torch.pow(mq - mp, 2),
                                       torch.exp(-log_vp))) +
-                  torch.sum(torch.diag(torch.mul(torch.exp(-log_vp),
-                                                 torch.matmul(lower_triang_q, lower_triang_q.t())))) -
+                  torch.sum(torch.exp(-log_vp) * torch.sum(torch.pow(lower_triang_q, 2), dim=1)) -
+#                  torch.sum(torch.diag(torch.mul(torch.exp(-log_vp),
+#                                                 torch.matmul(lower_triang_q, lower_triang_q.t())))) -
                   dimension)
+
+
+def _dkl_gaussian_q_lowrank_p_diag(mu_q: torch.Tensor,
+                                   cov_low_rank_q: torch.Tensor,
+                                   logvars_q: torch.Tensor,
+                                   mu_p: torch.Tensor,
+                                   logvars_p: torch.Tensor) -> torch.Tensor:
+
+
+    dimension = mu_q.size(0)
+    rank = cov_low_rank_q.size(1)
+    return 0.5 * (
+            torch.sum(logvars_p)
+            - torch.logdet(torch.matmul((-logvars_q).exp() * cov_low_rank_q.t(), cov_low_rank_q) +
+                           torch.eye(rank, device=mu_q.device))
+            #- torch.logdet(torch.matmul(cov_low_rank_q, cov_low_rank_q.t()) + torch.diagflat(logvars_q))
+            + torch.sum(torch.mul(torch.pow(mu_q - mu_p, 2), torch.exp(-logvars_p)))
+            + torch.sum(torch.exp(-logvars_p) * torch.sum(torch.pow(cov_low_rank_q, 2), dim=1))
+            + torch.sum((logvars_p - logvars_q).exp())
+            - dimension)
+
+
+    return 0

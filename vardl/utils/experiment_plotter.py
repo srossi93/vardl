@@ -45,7 +45,10 @@ class ExperimentPlotter():
         #print(logscale)
         
         #print(aggr_data.mean())
-        window = 1
+        if tag == 'model/dkl':
+            window = 1000
+        else:
+            window = 1
         steps = aggr_data.mean().rolling(window, min_periods=1, center=True).mean().index.tolist()
         #print(steps)
         means = aggr_data.mean().rolling(window, min_periods=1, center=True).mean()['value']

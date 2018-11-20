@@ -20,9 +20,7 @@ import time
 import traceback
 import os
 
-import gflags as flags
 
-FLAGS = flags.FLAGS
 
 
 def format_message(record):
@@ -96,8 +94,6 @@ def setLevel(newlevel):
     logger.debug('Log level set to %s', newlevel)
 
 
-def init():
-    setLevel(FLAGS.verbosity)
 
 debug = logging.debug
 info = logging.info
@@ -140,7 +136,6 @@ GLOG_PREFIX_REGEX = (
 
 
 def setup_logger(library_name: str, logging_path: str) -> logging.Logger:
-    from log_colorizer import make_colored_stream_handler, ColorFormatter
 
     directory = os.path.split(logging_path)[0]
 

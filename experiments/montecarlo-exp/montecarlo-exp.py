@@ -160,7 +160,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                               device=device,
                                               logger=tb_logger,
                                               seed=random_seed,
-                                              prior_optimization=prior_optimization)
+                                              prior_update_interval=prior_optimization)
 
     print(trainer.optimizer)
 

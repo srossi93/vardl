@@ -39,7 +39,8 @@ class BayesianConv2d(BaseBayesianLayer):
                  nmc_train: int = 1,
                  nmc_test: int = 1,
                  dtype: torch.dtype = torch.float32,
-                 device: torch.device = torch.device('cpu')):
+                 device: torch.device = torch.device('cpu'),
+                 rank: int = 2):
 
         super(BayesianConv2d, self).__init__(nmc_train=nmc_train,
                                              nmc_test=nmc_test,
@@ -62,6 +63,7 @@ class BayesianConv2d(BaseBayesianLayer):
         self.dtype = dtype
         self.device = device
         self.bias = bias
+        self.rank = rank
 
         self.filter_size = self.in_channels * (self.kernel_size ** 2)
 
@@ -83,7 +85,8 @@ class BayesianConv2d(BaseBayesianLayer):
                                                         m=self.out_channels,
                                                         approx=self.approx,
                                                         dtype=self.dtype,
-                                                        device=self.device)
+                                                        device=self.device,
+                                                        rank=self.rank)
         self.q_posterior_W.optimize(True)
         #self.prior_W.logvars.requires_grad = True
 
@@ -141,19 +144,11 @@ class BayesianConv2d(BaseBayesianLayer):
         if not self.local_reparameterization:
             w_sample = self.q_posterior_W.sample(self.nmc).transpose(-1, -2).view(-1, self.out_channels, self.in_channels, self.kernel_size,
                                                         self.kernel_size)
-
-
             if False:
-
                 patches = torch.nn.functional.unfold(input.view(-1, self.in_channels, self.in_height, self.in_width), self.kernel_size,
                                                  padding=self.padding, stride=self.stride, dilation=self.dilation).view(self.nmc, batch_size, self.filter_size, -1)
-
-
                 w_matrix_full = (w_sample.view(w_sample.size(0), w_sample.size(1), -1) * torch.ones(batch_size, 1, 1, 1, device=self.device)).transpose(0, 1)
-
-
                 output = torch.matmul(w_matrix_full, patches)#.view(self.nmc, batch_size, self.out_channels, self.out_height, self.out_width)
-
             else:
                 weights = w_sample.view(self.out_channels, self.in_channels, self.kernel_size,
                                                    self.kernel_size)
@@ -165,13 +160,7 @@ class BayesianConv2d(BaseBayesianLayer):
 
             return output
 
-        if self.local_reparameterization:
-            #output = self.q_posterior_W.sample_local_repr(self.nmc, patches)
-            #output = output.transpose(-1, -2).contiguous().view(self.nmc,
-            #                                                    -1,
-            #                                                    self.out_channels,
-            #                                                    self.out_height,
-            #                                                    self.out_width)
+        if self.local_reparameterization and self.approx == 'factorized':
 
             mean_weights = self.q_posterior_W.mean.view(self.out_channels, self.in_channels, self.kernel_size,
                                                         self.kernel_size)
@@ -189,15 +178,23 @@ class BayesianConv2d(BaseBayesianLayer):
                                                      padding=self.padding,
                                                      dilation=self.dilation)
 
-            #print(mean_output.norm())
-            #print(var_output.norm())
-
             eps = torch.randn_like(mean_output, requires_grad=False)
             output = mean_output + eps * torch.sqrt(var_output + 1e-5)
 
-
-
             return output.view(self.nmc, -1, self.out_channels, self.out_height, self.out_width)
+
+        if self.local_reparameterization and self.approx == 'low-rank':
+            Y = self.q_posterior_W.sample_local_repr_conv2d(self.nmc,
+                                                            in_data = input,
+                                                            out_channels = self.out_channels,
+                                                            in_channels = self.in_channels,
+                                                            in_height = self.in_height,
+                                                            in_width = self.in_width,
+                                                            kernel_size= self.kernel_size,
+                                                            stride = self.stride,
+                                                            padding = self.padding,
+                                                            dilation = self.dilation)
+            return Y
 
 
         raise NotImplementedError
