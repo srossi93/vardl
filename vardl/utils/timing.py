@@ -13,21 +13,21 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-# Original code by Karl Krauth
-# Changes by Kurt Cutajar, Edwin V. Bonilla, Pietro Michiardi, Maurizio Filippone
 
-from .logsumexp import logsumexp  # noqa: F401
-from .set_seed import set_seed  # noqa: F401
-from .path_utils import next_path  # nopa: F401
-from .experiment_plotter import ExperimentPlotter
-from .glog import *
-from .timing import timing
-import argparse
+from time import time
+from functools import wraps
+import logging
 
-def str2bool(v):
-    if v.lower() in ('yes', 'True', 't', 'y', '1'):
-        return True
-    elif v.lower() in ('no', 'False', 'f', 'n', '0'):
-        return False
-    else:
-        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+def timing(f):
+    @wraps(f)
+    def wrap(*args, **kw):
+        logger = logging.getLogger(__name__)
+        ts = time()
+        result = f(*args, **kw)
+        te = time()
+        logging.info('func:%r args:[%r] took: %2.4f sec' %
+                     (f.__name__, args[0], te - ts))
+        return result
+
+    return wrap

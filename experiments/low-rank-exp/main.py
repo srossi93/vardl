@@ -33,6 +33,16 @@ import os
 import time
 import humanize
 
+import logging
+
+def str2bool(v):
+    if v.lower() in ('yes', 'True', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'False', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def parse_config() -> argparse.Namespace:
 
     conf_parser = argparse.ArgumentParser(
@@ -71,6 +81,7 @@ def parse_config() -> argparse.Namespace:
     # default='factorized',)
     parser.add_argument('--local_reparameterization',   help='Local reparameterization during train/test')#,
     #                         default=True,)
+    parser.add_argument('--rank',                       help='Covariance rank for low-rank approximation', type=int)#,
     parser.add_argument('--nmc_train',                  help='Number of MonteCarlo samples in training')#, default=1,)
     parser.add_argument('--nmc_test',                   help='Number of MonteCarlo samples in testing')#, default=16,)
     parser.add_argument('--lr',                         help='Optimizer learning rate')#, default=0.0005,)
@@ -81,8 +92,8 @@ def parse_config() -> argparse.Namespace:
                                                              'outchannels+inchannels', type=str)
     parser.add_argument('--device',                     help='Device backend')#, default='cpu',)
     parser.add_argument('--test_interval',              help='Test every given iterations', type=int)#, default=1000,)
-    parser.add_argument('--test_verbose',               help='Verbosity during testing')#, default=True,)
-    parser.add_argument('--train_verbose',              help='Verbosity during training')#, default=False,)
+    parser.add_argument('--test_verbose',               help='Verbosity during testing', type=str2bool)#, default=True,)
+    parser.add_argument('--train_verbose',              help='Verbosity during training', type=str2bool)#, default=False,)
 
     args = parser.parse_args(remaining_argv)
     del args.conf_file
@@ -91,7 +102,7 @@ def parse_config() -> argparse.Namespace:
 
 
 def run_experiment(name, outdir, seed, fold, dataset, dataset_dir, batch_size, svi, bias, approx,
-                   local_reparameterization, nmc_train, nmc_test, lr, iterations, prior_update_interval,
+                   local_reparameterization, rank, nmc_train, nmc_test, lr, iterations, prior_update_interval,
                    prior_update_conv2d_type, device, test_interval, test_verbose, train_verbose, logger, logdir):
 
     torch.set_num_threads(8)
@@ -134,7 +145,8 @@ def run_experiment(name, outdir, seed, fold, dataset, dataset_dir, batch_size, s
                     'approx': approx,
                     'nmc_test': nmc_test,
                     'nmc_train': nmc_train,
-                    'device': torch.device(device)}
+                    'device': torch.device(device),
+                    'rank': rank}
 
     if svi == 'mcd':
         logger.info('Running experiment with MonteCarlo dropout variational inference')
@@ -242,6 +254,7 @@ def run_experiment(name, outdir, seed, fold, dataset, dataset_dir, batch_size, s
         logger.debug('Setting CuDNN backend')
         torch.backends.cudnn.benchmark = True
 
+
     trainer.fit(iterations=iterations,
                 test_interval=test_interval,
                 train_verbose=train_verbose,
@@ -255,12 +268,14 @@ def main():
 
     # Prepare the logger to saving in the right path
     if args.svi != 'mcd':
-        logdir = vardl.utils.next_path('%s/%s/%s_prior_update-%s_type-%s/' % (args.outdir, args.dataset, args.svi,
-                                                                    args.prior_update_interval, args.prior_update_conv2d_type) +
-                                       'run-%04d/')
+        if args.approx != 'low-rank':
+            path_template = '%s/%s/svi-%s/' % (args.outdir, args.dataset, args.approx) + 'run-%04d/'
+        else: # if low rank
+            path_template = '%s/%s/svi-rank%s/' % (args.outdir, args.dataset, args.rank) + 'run-%04d/'
+
+        logdir = vardl.utils.next_path(path_template)
     else:
-        logdir = vardl.utils.next_path('%s/%s/%s/' % (args.outdir, args.dataset, args.svi) +
-                                       'run-%04d/')
+        logdir = vardl.utils.next_path('%s/%s/%s/' % (args.outdir, args.dataset, args.svi) + 'run-%04d/')
 
     logger = vardl.utils.setup_logger('vardl', logdir)
 
@@ -271,8 +286,6 @@ def main():
     if args.prior_update_interval == 0 and args.prior_update_conv2d_type != 'layer':
         logger.fatal('Clashing options. Experiment canceled')
         sys.exit()
-
-
 
     # Print current configuration for debug
     logger.info('Running experiment %s' % args.name)

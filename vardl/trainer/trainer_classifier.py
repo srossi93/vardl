@@ -23,7 +23,7 @@ import torch.optim as optim
 from termcolor import colored
 from torch.utils.data import DataLoader
 
-from ..layers import BaseBayesianLayer
+from ..layers import BaseBayesianLayer, BayesianConv2d, BayesianLinear
 from ..logger import TensorboardLogger
 from ..utils import set_seed
 import logging
@@ -40,7 +40,8 @@ class TrainerClassifier():
                  seed: int,
                  logger: TensorboardLogger=None,
                  lr_decay_config: Dict = None,
-                 prior_optimization: int = 10000):
+                 prior_update_interval: int = 0,
+                 prior_update_conv2d_type: str = 'layer'):
 
         #assert optimizer == 'Adam'
 
@@ -52,6 +53,7 @@ class TrainerClassifier():
         for name, param in model.named_parameters():
             if param.requires_grad:
                 self._logger.info('  %s' % name)
+        #self._logger.info('Total: %s' % model.trainable_parameters)
 
         if optimizer == 'Adam':
             self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
@@ -72,7 +74,9 @@ class TrainerClassifier():
         set_seed(seed)
         self.lr_decay_config = lr_decay_config
 
-        self.prior_optimization = prior_optimization
+        self.prior_update_interval = prior_update_interval
+        self.is_prior_update = True if prior_update_interval != 0 else False
+        self.prior_update_conv2d_type = prior_update_conv2d_type
 
         # dummy_input = next(iter(test_dataloader))
         # print('Add graph')
@@ -144,16 +148,78 @@ class TrainerClassifier():
         self.tb_logger.scalar_summary('error/train', error, self.current_iteration)
         self.tb_logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
 
-#        if self.current_iteration % self.prior_optimization:
-#            #print('INFO - Updating priors')
-#            for child in self.model.modules():
-#                if issubclass(type(child), BaseBayesianLayer):
-#                    new_prior_mean = child.q_posterior_W._mean.data.mean()
-#                    new_prior_var = (child.q_posterior_W._logvars.data.exp() + torch.pow((child.prior_W._mean.data -
-#                                                                                   child.q_posterior_W._mean.data),
-#                                                                                         2)).mean()
-#                    child.prior_W._mean.data.fill_(new_prior_mean)
-#                    child.prior_W._logvars.data.fill_(torch.log(new_prior_var))
+        if self.is_prior_update:
+            self._prior_update()
+
+    def _prior_update(self):
+
+        if self.current_iteration % self.prior_update_interval == 0:
+            #self._logger.debug('Step %s - Updating priors ' % self.current_iteration)
+            for child in self.model.modules():
+                if isinstance(child, BayesianConv2d):
+                    # For conv2d, weights have shape [out_channels, in_channels, kernel_size, kernel_size]
+                    prior_means = child.prior_W.mean.view(child.out_channels, child.in_channels,
+                                                                child.kernel_size,
+                                                                 child.kernel_size)
+                    prior_vars = child.prior_W.logvars.view(child.out_channels, child.in_channels,
+                                                                       child.kernel_size,
+                                                                       child.kernel_size).exp()
+
+                    q_means = child.q_posterior_W.mean.view(child.out_channels, child.in_channels,
+                                                                 child.kernel_size,
+                                                                 child.kernel_size)
+                    q_vars = child.q_posterior_W.logvars.view(child.out_channels, child.in_channels,
+                                                                    child.kernel_size,
+                                                                    child.kernel_size).exp()
+
+                    new_prior_means = torch.zeros_like(prior_means, device=prior_means.device)
+                    new_prior_logvars = torch.zeros_like(prior_vars, device=prior_vars.device)
+
+                    if self.prior_update_conv2d_type == 'layer':
+                        m = q_means.mean()
+                        s = (q_vars + torch.pow((prior_means - q_means), 2)).mean()
+                        new_prior_means.fill_(m)
+                        new_prior_logvars.fill_(torch.log(s))
+
+                    if self.prior_update_conv2d_type == 'outchannels':
+                        for c_out in range(child.out_channels):
+                            m = q_means[c_out].mean()
+                            s = (q_vars[c_out] + torch.pow((prior_means[c_out] - q_means[c_out]), 2)).mean()
+
+                            new_prior_means[c_out].fill_(m)
+                            new_prior_logvars[c_out].fill_(torch.log(s))
+
+                    if self.prior_update_conv2d_type == 'outchannels+inchannels':
+                        for c_out in range(child.out_channels):
+                            for c_in in range(child.in_channels):
+                                m = q_means[c_out, c_in].mean()
+                                s = (q_vars[c_out, c_in] + torch.pow((prior_means[c_out, c_in] - q_means[c_out, c_in]), 2)).mean()
+
+                                new_prior_means[c_out, c_in].fill_(m)
+                                new_prior_logvars[c_out, c_in].fill_(torch.log(s))
+
+                    if self.prior_update_conv2d_type == 'outchannels+inchannels+inrows':
+                        for c_out in range(child.out_channels):
+                            for c_in in range(child.in_channels):
+                                for r_in in range(child.in_height):
+                                    m = q_means[c_out, c_in, r_in].mean()
+                                    s = (q_vars[c_out, c_in, r_in] + torch.pow((prior_means[c_out, c_in, r_in] - q_means[c_out, c_in, r_in]), 2)).mean()
+
+                                    new_prior_means[c_out, c_in, r_in].fill_(m)
+                                    new_prior_logvars[c_out, c_in, r_in].fill_(torch.log(s))
+
+
+                    child.prior_W._mean.data = new_prior_means.view_as(child.prior_W.mean)
+                    child.prior_W._logvars.data = new_prior_logvars.view_as(child.prior_W.logvars)
+
+
+                if isinstance(child, BayesianLinear):
+                    new_prior_mean = child.q_posterior_W._mean.data.mean()
+                    new_prior_var = (child.q_posterior_W._logvars.data.exp() + torch.pow((child.prior_W._mean.data -
+                                                                                          child.q_posterior_W._mean.data),
+                                                                                         2)).mean()
+                    child.prior_W._mean.data.fill_(new_prior_mean)
+                    child.prior_W._logvars.data.fill_(torch.log(new_prior_var))
 
     def train_per_iterations(self, iterations: int,
                              train_verbose: bool, train_log_interval: int):
@@ -200,6 +266,8 @@ class TrainerClassifier():
 
         #test_error /= len(self.test_dataloader)
         if verbose:
+            #print('Test: iter=%5d   mnll=%01.03e   error=%8.3f' %
+            #                  (self.current_iteration, test_nell.item(), test_error.item()))
             self._logger.info('Test: iter=%5d   mnll=%01.03e   error=%8.3f' %
                               (self.current_iteration, test_nell.item(), test_error.item()))
 

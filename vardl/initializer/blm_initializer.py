@@ -151,13 +151,22 @@ class BLMInitializer(BaseInitializer):
                 layer.q_posterior_W.mean.data[:, out_index] = blm_W_m
                 layer.q_posterior_W.logvars.data[:, out_index] = blm_W_logv
 
-            elif layer.approx == 'full':
+            if layer.approx == 'full':
                 #raise NotImplementedError()
                 layer.q_posterior_W.mean.data[:, out_index] = blm_W_m
                 q_chol_L = torch.potrf(blm_W_cov, upper=True).t()
                 blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
                 # layer.q_W_dial_log_L_chol.data.copy_(q_chol_L.diag().log())
                 layer.q_posterior_W.cov_lower_triangular[out_index] = q_chol_L
+                layer.q_posterior_W.logvars.data[:, out_index] = blm_W_logv
+
+            if layer.approx == 'low-rank':
+                if layer_index != 0:
+                    blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
+                else:
+                    blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
+
+                layer.q_posterior_W.mean.data[:, out_index] = blm_W_m
                 layer.q_posterior_W.logvars.data[:, out_index] = blm_W_logv
 
 

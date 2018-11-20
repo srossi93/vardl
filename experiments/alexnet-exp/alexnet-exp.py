@@ -161,7 +161,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                               lr_decay_config=dict(gamma=0.0001, p=0),
                                               device=device,
                                               logger=tb_logger,
-                                              seed=random_seed, prior_optimization=1)
+                                              seed=random_seed, prior_update_interval=1)
 
 
     if init_strategy == 'uninformative':

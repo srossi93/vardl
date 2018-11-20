@@ -23,7 +23,7 @@ def build_alexnet_cifar10(in_channel, in_height, in_width, out_labels, **config)
     nmc_train = config['nmc_train']
     nmc_test = config['nmc_test']
 
-    conv1 = BayesianConv2d(3, 32, 32, 48, kernel_size=11, stride=4, padding=5, **config)
+    conv1 = BayesianConv2d(3, 32, 32, 48, kernel_size=11, stride=4, padding=5,  **config)
     conv2 = BayesianConv2d(48, 4, 4, 128, kernel_size=5, padding=2, **config)
     conv3 = BayesianConv2d(128, 2, 2, 192, kernel_size=3, padding=1, **config)
     conv4 = BayesianConv2d(192, 2, 2, 192, kernel_size=3, padding=1, **config)

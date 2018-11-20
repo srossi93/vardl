@@ -34,7 +34,8 @@ class BayesianLinear(BaseBayesianLayer):
                  nmc_train: int = 10,
                  nmc_test: int = 10,
                  dtype: torch.device = torch.float32,
-                 device: torch.device = torch.device('cpu')):
+                 device: torch.device = torch.device('cpu'),
+                 rank: int = 2):
 
         super(BayesianLinear, self).__init__(nmc_train=nmc_train,
                                              nmc_test=nmc_test,
@@ -45,6 +46,7 @@ class BayesianLinear(BaseBayesianLayer):
 
         self.approx = approx
         self.local_reparameterization = local_reparameterization
+        self.rank = rank
 
         self.prior_W = MatrixGaussianDistribution(n=self.in_features,
                                                   m=self.out_features,
@@ -56,7 +58,8 @@ class BayesianLinear(BaseBayesianLayer):
                                                         m=self.out_features,
                                                         approx=self.approx,
                                                         dtype=self.dtype,
-                                                        device=self.device)
+                                                        device=self.device,
+                                                        rank = self.rank)
 
     #    self.prior_W.logvars.data.fill_(np.log(0.05))
         self.prior_W.logvars.data.fill_(np.log(.1))
