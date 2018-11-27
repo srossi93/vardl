@@ -33,5 +33,5 @@ class ClassBayesianNet(BaseBayesianNet):
 
     def forward(self, input):
         input = input *torch.ones(self.architecture[0].nmc, *input.size()).to(self.architecture[0].device)
-        return nn.parallel.data_parallel(self.architecture, inputs=input, dim=1)
-        #return self.architecture(input)
+        #return nn.parallel.data_parallel(self.architecture, inputs=input, dim=1)
+        return self.architecture(input)

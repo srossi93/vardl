@@ -135,7 +135,7 @@ GLOG_PREFIX_REGEX = (
 """Regex you can use to parse glog line prefixes."""
 
 
-def setup_logger(library_name: str, logging_path: str) -> logging.Logger:
+def setup_logger(library_name: str, logging_path: str, level: str = 'INFO') -> logging.Logger:
 
     directory = os.path.split(logging_path)[0]
 
@@ -157,7 +157,13 @@ def setup_logger(library_name: str, logging_path: str) -> logging.Logger:
     # Create console handler with a higher log level
     formatter_colored = GlogFormatter(colored=True)
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    if level == 'INFO':
+        ch.setLevel(logging.INFO)
+    elif level == 'DEBUG':
+        ch.setLevel(logging.DEBUG)
+    else:
+        return None
+
     ch.setFormatter(formatter_colored)
     logger.addHandler(ch)
 

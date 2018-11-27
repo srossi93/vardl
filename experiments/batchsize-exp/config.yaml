@@ -1,0 +1,25 @@
+# ***** General *****
+name: 'batchsize experiment'
+outdir: './workspace'
+
+# ***** Dataset *****
+fold: 0
+dataset: mnist
+dataset_dir: '/mnt/workspace/datasets' #/home/srossi/research/datasets'
+batch_size: 64
+
+# ***** Model *****
+svi: blm-init
+nmc_train: 1
+nmc_test: 16
+
+# ***** Trainer *****
+iterations: 8
+device: cpu
+
+# ***** Logging *****
+test_interval: 1000
+test_verbose: True
+train_verbose: False
+
+

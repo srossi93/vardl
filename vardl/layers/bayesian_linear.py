@@ -31,8 +31,8 @@ class BayesianLinear(BaseBayesianLayer):
                  bias: bool = False,
                  approx: str = 'factorized',
                  local_reparameterization: bool = False,
-                 nmc_train: int = 10,
-                 nmc_test: int = 10,
+                 nmc_train: int = 1,
+                 nmc_test: int = 1,
                  dtype: torch.device = torch.float32,
                  device: torch.device = torch.device('cpu'),
                  rank: int = 2):
