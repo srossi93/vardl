@@ -39,7 +39,7 @@ class TrainerRegressor():
                  seed: int,
                  logger: BaseLogger=None):
 
-        assert optimizer == 'Adam'
+        #assert optimizer == 'Adam'
 
         self.device = device
         self.model = model.to(self.device)
@@ -47,6 +47,12 @@ class TrainerRegressor():
         if optimizer == 'Adam':
             self.optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()),
                                         **optimizer_config)
+        elif optimizer == 'SGD':
+            self.optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()),
+                                        **optimizer_config)
+        else:
+            raise ValueError('optimizer unknown')
+
         self.current_epoch = 0
         self.current_iteration = 0
 
@@ -87,7 +93,7 @@ class TrainerRegressor():
 
         if self.current_iteration % train_log_interval == 0 and train_verbose:
             print(colored('Train', 'blue', attrs=['bold']),
-                  "|| iter=%5d   loss=%10.0f  dkl=%8.0f  error=%.2f  log_theta_noise_var=%5.2f" %
+                  "|| iter=%5d   loss=%1.4e  dkl=%1.4e  error=%.2f  log_theta_noise_var=%5.2f" %
                   (self.current_iteration, loss.item(), self.model.dkl.item(),
                    error.item(),
                    self.model.likelihood.log_noise_var.item()))
@@ -101,7 +107,8 @@ class TrainerRegressor():
         self.optimizer.step()
 
     def train_per_iterations(self, iterations: int,
-                             train_verbose: bool, train_log_interval: int):
+                             train_verbose: bool = False,
+                             train_log_interval: int = 100):
         """ Implement the logic of training the model. """
         self.model.train()
         dataloader_iterator = iter(self.train_dataloader)

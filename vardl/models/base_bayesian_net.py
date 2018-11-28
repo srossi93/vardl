@@ -20,10 +20,11 @@ import torch
 import humanize
 import torch.nn as nn
 
-from ..layers import BayesianConv2d
+from ..layers import BaseBayesianLayer
 from ..layers import BayesianLinear
 
 import logging
+
 
 class BaseBayesianNet(nn.Module):
 
@@ -35,10 +36,18 @@ class BaseBayesianNet(nn.Module):
 
     @property
     def dkl(self):
-        total_dkl = 0
-        for layer in self.architecture:
-            total_dkl += layer.dkl if isinstance(layer, BayesianLinear) or isinstance(layer, BayesianConv2d) else 0
-        return total_dkl# / 50
+        total_dkl = torch.tensor(0.)
+        for layer in self.modules():
+            total_dkl += layer.dkl if issubclass(type(layer), BaseBayesianLayer) else 0
+        return total_dkl
+
+#    @property
+#    def dkl(self):
+#        total_dkl = 0
+#        for layer in self.architecture:
+#            total_dkl += layer.dkl if isinstance(layer, BayesianLinear) or isinstance(layer, BayesianConv2d) else 0
+#        return total_dkl# / 50
+
     @property
     def trainable_parameters(self):
         return humanize.intword(sum(p.numel() for p in self.parameters() if p.requires_grad))
