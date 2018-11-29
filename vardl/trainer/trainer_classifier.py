@@ -80,7 +80,7 @@ class TrainerClassifier():
 
         # dummy_input = next(iter(test_dataloader))
         # print('Add graph')
-        # self.logger.writer.add_graph(self.model, (dummy_input, ), True)
+        # self.tb_logger.writer.add_graph(self.model, (dummy_input, ), True)
 
 
     def compute_nell(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
@@ -124,7 +124,7 @@ class TrainerClassifier():
 
         self.optimizer.step()
 
-        # -- Reporting to stdout and to the logger (i.e. tensorboard)
+        # -- Reporting to stdout and to the tb_logger (i.e. tensorboard)
         if self.current_iteration % train_log_interval == 0:
             if train_verbose:
                 self._logger.debug('Train: iter=%5d  loss=%01.03e  dkl=%01.03e  error=%.2f ' %
@@ -132,10 +132,10 @@ class TrainerClassifier():
 
             #for name, param in self.model.named_parameters():
             #    if param.requires_grad:
-            #        self.logger.writer.add_histogram(name,
+            #        self.tb_logger.writer.add_histogram(name,
             #                                         param.clone().cpu().data.numpy(),
             #                                         self.current_iteration, )
-            #        self.logger.writer.add_histogram(name + '.grad',
+            #        self.tb_logger.writer.add_histogram(name + '.grad',
             #                                         param.grad.clone().cpu().data.numpy(),
             #                                         self.current_iteration, )
 

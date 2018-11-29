@@ -25,7 +25,9 @@ from torch.utils.data import DataLoader
 
 from ..logger import BaseLogger
 from ..utils import set_seed
+import logging
 
+logger = logging.getLogger(__name__)
 
 class TrainerRegressor():
 
@@ -37,7 +39,7 @@ class TrainerRegressor():
                  test_dataloader: DataLoader,
                  device: str,
                  seed: int,
-                 logger: BaseLogger=None):
+                 tb_logger: BaseLogger=None):
 
         #assert optimizer == 'Adam'
 
@@ -59,7 +61,7 @@ class TrainerRegressor():
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
 
-        self.logger = logger
+        self.tb_logger = tb_logger
 
         set_seed(seed)
 
@@ -92,17 +94,27 @@ class TrainerRegressor():
         loss.backward()
 
         if self.current_iteration % train_log_interval == 0 and train_verbose:
-            print(colored('Train', 'blue', attrs=['bold']),
-                  "|| iter=%5d   loss=%1.4e  dkl=%1.4e  error=%.2f  log_theta_noise_var=%5.2f" %
-                  (self.current_iteration, loss.item(), self.model.dkl.item(),
-                   error.item(),
-                   self.model.likelihood.log_noise_var.item()))
+            logger.debug('Train: iter=%5d  loss=%01.03e  dkl=%01.03e  error=%.2f  log_noise=%+.2f' %
+                         (self.current_iteration,
+                          loss.item(),
+                          self.model.dkl.item(),
+                          error.item(),
+                          self.model.likelihood.log_noise_var))
 
-        self.logger.scalar_summary('loss/train', loss, self.current_iteration)
-        self.logger.scalar_summary('error/train', error, self.current_iteration)
-        self.logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
-        self.logger.scalar_summary('model/log_noise_var', self.model.likelihood.log_noise_var,
-                                   self.current_iteration)
+            for name, param in self.model.named_parameters():
+                if param.requires_grad:
+#                    self.tb_logger.writer.add_histogram(name,
+#                                                     param.clone().cpu().data.numpy(),
+#                                                     self.current_iteration, )
+                    self.tb_logger.writer.add_histogram(name + '.grad',
+                                                     param.grad.clone().cpu().data.numpy(),
+                                                     self.current_iteration, )
+
+        self.tb_logger.scalar_summary('loss/train', loss, self.current_iteration)
+        self.tb_logger.scalar_summary('error/train', error, self.current_iteration)
+        self.tb_logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
+        self.tb_logger.scalar_summary('model/log_noise_var', self.model.likelihood.log_noise_var,
+                                      self.current_iteration)
 
         self.optimizer.step()
 
@@ -153,8 +165,8 @@ class TrainerRegressor():
         print(colored('Test', 'green', attrs=['bold']),
               " || iter=%5d   mnll=%10.3f   rmse=%8.3f" % (self.current_iteration, test_nell.item(), test_error.item()))
 
-        self.logger.scalar_summary('loss/test', test_nell, self.current_iteration)
-        self.logger.scalar_summary('error/test', test_error, self.current_iteration)
+        self.tb_logger.scalar_summary('loss/test', test_nell, self.current_iteration)
+        self.tb_logger.scalar_summary('error/test', test_error, self.current_iteration)
 
     def fit(self, iterations: int, test_interval: int,
             train_verbose: bool, train_log_interval: int):

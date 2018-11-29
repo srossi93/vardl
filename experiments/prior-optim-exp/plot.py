@@ -112,12 +112,12 @@ def main():
     }
 
     for dataset in datasets:
-        # logger.info('Plotting for dataset %s' % dataset)
+        # tb_logger.info('Plotting for dataset %s' % dataset)
         fig, axs = plt.subplots(len(tags), 1)
 
         for i, tag in enumerate(tags):
             for method in methods:
-                # logger.info('Plotting ' + method)
+                # tb_logger.info('Plotting ' + method)
                 files = list(glob.glob(basedir + dataset + '/' + method + '/**/%s.csv' % tag.replace('/', '_'),
                                        recursive=True))
                 try:

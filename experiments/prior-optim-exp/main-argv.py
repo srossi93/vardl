@@ -253,7 +253,7 @@ def main():
     args = parse_config()
 
 
-    # Prepare the logger to saving in the right path
+    # Prepare the tb_logger to saving in the right path
     if args.svi != 'mcd':
         logdir = vardl.utils.next_path('%s/%s/%s_prior_update-%s_type-%s/' % (args.outdir, args.dataset, args.svi,
                                                                     args.prior_update_interval, args.prior_update_conv2d_type) +

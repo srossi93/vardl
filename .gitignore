@@ -5,6 +5,7 @@ __pycache__/
 *.idea/
 work/
 figures/
+workspace/
 # C extensions
 *.so
 

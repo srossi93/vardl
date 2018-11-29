@@ -127,7 +127,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
                                              optimizer='Adam',
                                              optimizer_config={'lr': float(lr)},
                                              device=device,
-                                             logger=tb_logger,
+                                             tb_logger=tb_logger,
                                              seed=random_seed)
 
     #initializer = vardl.initializer.OrthogonalInitializer(model)

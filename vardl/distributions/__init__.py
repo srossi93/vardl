@@ -16,4 +16,5 @@
 
 from .base_distribution import BaseDistribution
 from .matrix_gaussian_distribution import MatrixGaussianDistribution
+from .multivariate_gaussian_distribution import MultivariateGaussianDistribution
 from .dkl import dkl_matrix_gaussian

@@ -188,7 +188,7 @@ def run_experiment(batch_size, iterations, lr, bias, approx, local_reparameteriz
 
     torch.backends.cudnn.benchmark = True
 
-#    trainer.logger.save_model("_after_init")
+#    trainer.tb_logger.save_model("_after_init")
 
     final_test_nell, final_test_error = trainer.fit(iterations=iterations,
                                                     test_interval=test_interval,

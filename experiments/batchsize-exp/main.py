@@ -232,7 +232,7 @@ def main():
     import torch.multiprocessing as mp
 
 
-    # Prepare the logger to saving in the right path
+    # Prepare the tb_logger to saving in the right path
     logdir = vardl.utils.next_path('%s/%s/%s/' % (args.outdir, args.dataset, args.svi) + 'run-%04d/')
 
     global logger

@@ -151,7 +151,7 @@ def setup_logger(library_name: str, logging_path: str, level: str = 'INFO') -> l
     # Create formatter and add it to the handlers
     formatter = GlogFormatter()
     fh.setFormatter(formatter)
-    # Add the handlers to the logger
+    # Add the handlers to the tb_logger
     logger.addHandler(fh)
 
     # Create console handler with a higher log level

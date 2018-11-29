@@ -39,7 +39,7 @@ class VardlImportTest(unittest.TestCase):
         self.assertTrue('vardl.layers' in sys.modules)
 
     def test_import_vardl_logger(self):
-        self.assertTrue('vardl.logger' in sys.modules)
+        self.assertTrue('vardl.tb_logger' in sys.modules)
 
     def test_import_vardl_trainer(self):
         self.assertTrue('vardl.trainer' in sys.modules)
