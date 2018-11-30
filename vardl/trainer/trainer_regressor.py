@@ -111,6 +111,7 @@ class TrainerRegressor():
                                                      self.current_iteration, )
 
         self.tb_logger.scalar_summary('loss/train', loss, self.current_iteration)
+        self.tb_logger.scalar_summary('nell/train', loss - self.model.dkl, self.current_iteration)
         self.tb_logger.scalar_summary('error/train', error, self.current_iteration)
         self.tb_logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
         self.tb_logger.scalar_summary('model/log_noise_var', self.model.likelihood.log_noise_var,
@@ -162,10 +163,10 @@ class TrainerRegressor():
         test_error = torch.sqrt(test_error/len(self.test_dataloader.dataset))
         #test_error /= len(self.test_dataloader)
 
-        print(colored('Test', 'green', attrs=['bold']),
-              " || iter=%5d   mnll=%10.3f   rmse=%8.3f" % (self.current_iteration, test_nell.item(), test_error.item()))
+        logger.info('Test: iter=%5d   mnll=%01.03e   error=%8.3f' %
+                          (self.current_iteration, test_nell.item(), test_error.item()))
 
-        self.tb_logger.scalar_summary('loss/test', test_nell, self.current_iteration)
+        self.tb_logger.scalar_summary('nell/test', test_nell, self.current_iteration)
         self.tb_logger.scalar_summary('error/test', test_error, self.current_iteration)
 
     def fit(self, iterations: int, test_interval: int,
