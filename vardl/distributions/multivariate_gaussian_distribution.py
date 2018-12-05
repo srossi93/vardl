@@ -137,7 +137,7 @@ class MultivariateGaussianDistribution(BaseDistribution):
             Tensor of samples with shape [n_samples, n]
         """
 
-        epsilon_for_samples = torch.randn(n_samples[0], n_samples[1], self.n,
+        epsilon_for_samples = torch.randn(n_samples, self.n,
                                           dtype=self.dtype,
                                           device=self.device,
                                           requires_grad=False)

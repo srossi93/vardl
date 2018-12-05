@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
 
 import vardl
-logger = vardl.utils.setup_logger('vardl', '/tmp/', 'DEBUG')
+logger = vardl.utils.setup_logger('vardl', '/tmp/', 'INFO')
 
 
 
@@ -38,21 +38,21 @@ class SimpleNN(vardl.models.BaseBayesianNet):
     def __init__(self):
         super(SimpleNN, self).__init__()
 #        self.nmc = 128
-        self.fastfood_layer = vardl.layers.BayesianFastfoodLinear(1, 16, nmc_train=32, nmc_test=128)
-        self.fastfood_layer2 = vardl.layers.BayesianFastfoodLinear(16, 16, nmc_train=32, nmc_test=128)
+        self.fastfood_layer = vardl.layers.BayesianFastfoodLinear(1, 64, nmc_train=1, nmc_test=128)
+        self.fastfood_layer2 = vardl.layers.BayesianFastfoodLinear(64, 64, nmc_train=1, nmc_test=128)
         #self.fastfood_layer3 = vardl.layers.BayesianFastfoodLinear(16, 16)
         #self.fastfood_layer3 = BayesianFastfoodLinear(32)
         #self.fastfood_layer4 = BayesianFastfoodLinear(32)
-        self.fc = vardl.layers.BayesianLinear(16, 1, local_reparameterization=True, nmc_train=32, nmc_test=128,
-                                              bias=False)
-        self.fc.prior_W._logvars.data.fill_(np.log(0.01))
+        self.fc = vardl.layers.BayesianLinear(64, 1, local_reparameterization=True, nmc_train=1, nmc_test=128,
+                                               bias=False)
+#        self.fc.prior_W._logvars.data.fill_(np.log(0.01))
         self.likelihood = vardl.likelihoods.Gaussian(dtype=torch.float32)
 
         self.activation_function = torch.tanh
 
 
     def forward(self, input):
-        x = input * torch.ones(self.fc.nmc, *input.size()).to(input.device)
+        x = input * torch.ones(self.fastfood_layer.nmc, *input.size()).to(input.device)
         x = self.fastfood_layer(x)
         x = self.activation_function(x)
         x = self.fastfood_layer2(x)
@@ -103,11 +103,11 @@ def tsplot(x, y, n=20, percentile_min=1, percentile_max=99, color='r', plot_mean
 def main():
     model = SimpleNN()
     #model.train()
-    logger.debug(model)
+
 
     full_data = np.linspace(-10, 10, 256).reshape(-1, 1)
     gap_data = np.delete(full_data, range(30, 80)).reshape(-1, 1)
-    full_data = np.linspace(-12, 12, 4096).reshape(-1, 1)
+    full_data = np.linspace(-17.5, 17.5, 4096).reshape(-1, 1)
     #full_targets = function(full_data)
 
 
@@ -131,9 +131,9 @@ def main():
                                              tb_logger=tb_logger)
     try:
         model.likelihood.log_noise_var.requires_grad = False
-        trainer.fit(iterations=25000, test_interval=500, train_verbose=False)
+        trainer.fit(iterations=15000, test_interval=500, train_verbose=False)
         model.likelihood.log_noise_var.requires_grad = True
-        trainer.fit(iterations=25000, test_interval=500, train_verbose=False)
+        trainer.fit(iterations=5000, test_interval=500, train_verbose=False)
     except KeyboardInterrupt:
         logger.warning('User interruption! Continue...')
     trainer.test()
@@ -158,7 +158,7 @@ def main():
 #        fig.show()
 
         tsplot(full_data[...,0], predicted_targets.detach().numpy()[..., 0], n=3, ax=ax)
-        ax.set_ylim(-3,3)
+        ax.set_ylim(-5,5)
 
     plt.show()
     return 1

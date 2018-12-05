@@ -42,53 +42,103 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
     def __init__(self,
                  in_features,
                  out_features,
+                 bias: bool = False,
                  nmc_train: int = 1,
                  nmc_test: int = 1,
                  device: str = 'cpu',
                  dtype: torch.dtype = torch.float32):
         super(BayesianFastfoodLinear, self).__init__(nmc_train, nmc_test, dtype, device)
 
+        self.in_features = in_features
         self.out_features = out_features
+        self.bias = bias
+        if self.out_features < self.in_features:
+            raise NotImplementedError('Corner case to handle')
+
+
+        self.times_to_stack_v = self.out_features // self.in_features
 
         # S vector
-        #self.S = torch.nn.Parameter(torch.randn(out_features))
-        self.q_S = distributions.MultivariateGaussianDistribution(out_features)
-        self.prior_S = distributions.MultivariateGaussianDistribution(out_features)
+        #self.S = torch.nn.Parameter(torch.randn(in_features))
+        self.q_S = distributions.MultivariateGaussianDistribution(self.in_features)
+        self.prior_S = distributions.MultivariateGaussianDistribution(self.in_features)
         self.q_S.optimize()
-        self.q_G = distributions.MultivariateGaussianDistribution(out_features)
-        self.prior_G = distributions.MultivariateGaussianDistribution(out_features)
+        self.q_G = distributions.MultivariateGaussianDistribution(self.in_features)
+        self.prior_G = distributions.MultivariateGaussianDistribution(self.in_features)
         self.q_G.optimize()
-        # self.q_G = torch.nn.Parameter(torch.tensor(np.random.randn(out_features)).float())
-        self.B = torch.nn.Parameter(torch.tensor(np.random.choice((-1, 1), size=out_features)).float(),
-                                    requires_grad=False)
-        self.P = torch.nn.Parameter(torch.tensor(np.random.permutation(out_features)), requires_grad=False)
+        # self.q_G = torch.nn.Parameter(torch.tensor(np.random.randn(in_features)).float())
 
-        self.bias = torch.nn.Parameter(torch.randn(out_features))
-        # self.bias = vardl.distributions.MultivariateGaussianDistribution(out_features)
-        # self.bias.optimize = True
+        self.B = torch.nn.Parameter(torch.Tensor(np.random.choice((-1, 1), size=[self.times_to_stack_v,
+                                                                                 self.in_features])).float(),
+                                    requires_grad=False)
+
+        #self.P = torch.nn.Parameter(torch.Tensor(np.random.permutation(self.out_features)), requires_grad=False)
+        self.P = torch.nn.Parameter(
+            torch.from_numpy(
+                np.hstack([(i * self.in_features) + np.random.permutation(self.in_features) for i in range(
+                    self.times_to_stack_v)])
+            ), requires_grad=False)
+#        logger.debug(str(self.P))
+
+        #self.bias = torch.nn.Parameter(torch.randn(self.out_features))
+        if bias:
+            self.q_bias = distributions.MultivariateGaussianDistribution(self.out_features)
+            self.prior_bias = distributions.MultivariateGaussianDistribution(self.out_features)
+            self.prior_bias.logvars.fill_(np.log(0.01))
+            self.q_bias.optimize()
 
         self.prior_S.logvars.fill_(np.log(0.01))
         self.prior_G.logvars.fill_(np.log(0.01))
 
-    def forward(self, input):
-        # self.P.data = torch.tensor(np.random.permutation(self.out_features))
-        # self.B.data = torch.tensor(np.random.choice((-1, 1), size=self.out_features)).float()
-        G = self.q_G.sample([self.nmc, input.size(1)])
-        S = self.q_S.sample([self.nmc, input.size(1)])
+    def forward(self, input: torch.Tensor):
+        """
+        Perform Vx + b
+        Parameters
+        ----------
+        input torch.Tensor: Input tensor with size (NMC x BS x D_in)
 
-        HBx = functional.HadamardTransform.apply(self.B * input)
-        #logger.info(HBx.size())
+        Returns
+        -------
 
-        PHBx = HBx[..., self.P]
+        """
+        # self.P.data = torch.tensor(np.random.permutation(self.in_features))
+        # self.B.data = torch.tensor(np.random.choice((-1, 1), size=self.in_features)).float()
+        batch_size = input.size(1)
+        G = self.q_G.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
+        S = self.q_S.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
+
+        logger.debug('input: %s' % str(input.size()))
+        input = input.unsqueeze(-2) # Size: NMC x BS x 1 x D_in
+        logger.debug('input unsqueezed: %s' % str(input.size()))
+        #input = torch.cat([input for _ in range(self.out_features//self.in_features)], dim=-1)
+        logger.debug('B: %s' % str(self.B.size()))
+        Bx = (self.B * input)#.squeeze(-1) # Size: NMC x BS x D_out
+        logger.debug('Bx: %s' % str(Bx.size()))
+
+        HBx = functional.HadamardTransform.apply(Bx).view(self.nmc, batch_size, -1)#.squeeze(-1)
+        logger.debug('HBx: %s' % str(HBx.size()))
+
+        PHBx = HBx[..., self.P.long()]#.unsqueeze(-2)
+        logger.debug('PHBx: %s' % str(PHBx.size()))
         #logger.info(PHBx.size())
 
-        #logger.info(G.size())
-        HGPHBx = functional.HadamardTransform.apply(G * PHBx)
+        logger.debug('G: %s' % str(G.size()))
+        GPHBx = G * PHBx
+        logger.debug('GPHBx: %s' % str(GPHBx.size()))
+        HGPHBx = functional.HadamardTransform.apply(GPHBx)
+        logger.debug('HGPHBx: %s' % str(HGPHBx.size()))
         #logger.info(HGPHBx.size())
-        return (S * HGPHBx) + self.bias  # .sample(self.nmc)
+        logger.debug('S: %s' % str(G.size()))
+
+        if self.bias:
+            return (HGPHBx) + self.q_bias.sample(self.nmc * batch_size).view(self.nmc, batch_size, -1)
+        else:
+            return HGPHBx
 
     @property
     def dkl(self):
         dkl = distributions.dkl.dkl_matrix_gaussian(self.q_S, self.prior_S)
         dkl += distributions.dkl.dkl_matrix_gaussian(self.q_G, self.prior_G)
+        if self.bias:
+            dkl += distributions.dkl.dkl_matrix_gaussian(self.q_bias, self.prior_bias)
         return dkl

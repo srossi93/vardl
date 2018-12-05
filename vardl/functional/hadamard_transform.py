@@ -16,6 +16,9 @@
 
 import numpy as np
 import torch
+import logging
+
+logger = logging.getLogger(__name__)
 
 def hadamard_transform_cpu(u, normalize=False):
     """
@@ -32,7 +35,7 @@ def hadamard_transform_cpu(u, normalize=False):
         product: Tensor of shape (..., n)
     """
 
-    nmc, batch_size, n = u.shape
+    n = u.shape[-1]
     m = int(np.log2(n))
     if n != 1 << m:
         raise ValueError('d must be a power of 2')
