@@ -20,12 +20,14 @@ from typing import Dict
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from termcolor import colored
 from torch.utils.data import DataLoader
+import time
 
 from ..logger import BaseLogger
 from ..utils import set_seed
 import logging
+
+from ..utils.exception import VardlRunningTimeException
 
 logger = logging.getLogger(__name__)
 
@@ -169,9 +171,34 @@ class TrainerRegressor():
         self.tb_logger.scalar_summary('nell/test', test_nell, self.current_iteration)
         self.tb_logger.scalar_summary('error/test', test_error, self.current_iteration)
 
-    def fit(self, iterations: int, test_interval: int,
-            train_verbose: bool, train_log_interval: int):
-        for _ in range(iterations // test_interval):
-            self.test()
-            self.train_per_iterations(test_interval, train_verbose, train_log_interval)
+    def fit(self,
+            iterations: int,
+            test_interval: int,
+            train_verbose: bool,
+            train_log_interval: int = 100,
+            time_budget: int = 60) -> None:
+        """
+        Performs train and validation
+        Parameters
+        ----------
+        iterations
+        test_interval
+        train_verbose
+        train_log_interval
+        time_budget
+
+        Returns
+        -------
+
+        """
+        t_start = time.time()
+        try:
+            for _ in range(iterations // test_interval):
+                self.test()
+                self.train_per_iterations(test_interval, train_verbose, train_log_interval)
+                if (time.time() - t_start) / 60 > time_budget:
+                    raise VardlRunningTimeException('Interrupting training due to time budget elapsed')
+        except VardlRunningTimeException as e:
+            logger.warning(e)
+
         self.test()

@@ -31,80 +31,34 @@ import vardl
 logger = vardl.utils.setup_logger('vardl', '/tmp/', 'DEBUG')
 
 
-class BayesianFastfoodLinear(vardl.layers.BaseBayesianLayer):
-    """
-    Implements a Variational Fastfood linear layer using Fast Hadamard transform
-    output = V @ input + c
-    where V = S H q_G P H B
-        P: permutation matrix
-        H: Hadamard matrix (implicit thanks to FHT)
-        B: Binary scaling (+-1)
-        q_G: Gaussian vector
-        S: Scaling vector
-    q_G and S are learned variationally
-    """
 
-    def __init__(self, d_out):
-        super(BayesianFastfoodLinear, self).__init__(device = 'cpu', nmc_train=1, nmc_test=1, dtype=torch.float32)
-        self.d_out = d_out
-
-        # S vector
-        self.q_S = vardl.distributions.MultivariateGaussianDistribution(d_out)
-        self.prior_S = vardl.distributions.MultivariateGaussianDistribution(d_out)
-        self.q_S.optimize()
-        self.q_G = vardl.distributions.MultivariateGaussianDistribution(d_out)
-        self.prior_G = vardl.distributions.MultivariateGaussianDistribution(d_out)
-        self.q_G.optimize()
-        #self.q_G = torch.nn.Parameter(torch.tensor(np.random.randn(d_out)).float())
-        self.B = torch.nn.Parameter(torch.tensor(np.random.choice((-1, 1), size=d_out)).float(), requires_grad=False)
-        self.P = torch.nn.Parameter(torch.tensor(np.random.permutation(d_out)), requires_grad=False)
-
-        self.bias = torch.nn.Parameter(torch.randn(d_out))
-        #self.bias = vardl.distributions.MultivariateGaussianDistribution(d_out)
-        #self.bias.optimize = True
-
-        self.prior_S.logvars.fill_(np.log(.01))
-        self.prior_G.logvars.fill_(np.log(.01))
-
-    def forward(self, input):
-        #self.P.data = torch.tensor(np.random.permutation(self.d_out))
-        #self.B.data = torch.tensor(np.random.choice((-1, 1), size=self.d_out)).float()
-        G = self.q_G.sample(self.nmc)
-        S = self.q_S.sample(self.nmc)
-
-        HBx = vardl.functional.HadamardTransform.apply(self.B * input)
-
-        PHBx = HBx[..., self.P]
-
-        HGPHBx = vardl.functional.HadamardTransform.apply(G * PHBx)
-        return (S * HGPHBx) + self.bias#.sample(self.nmc)
-
-    @property
-    def dkl(self):
-        dkl = vardl.distributions.dkl.dkl_matrix_gaussian(self.q_S, self.prior_S)
-        dkl += vardl.distributions.dkl.dkl_matrix_gaussian(self.q_G, self.prior_G)
-        return dkl
 
 
 class SimpleNN(vardl.models.BaseBayesianNet):
     def __init__(self):
         super(SimpleNN, self).__init__()
-        self.nmc = 512
-        self.fastfood_layer = BayesianFastfoodLinear(64)
-        self.fastfood_layer2 = BayesianFastfoodLinear(64)
+#        self.nmc = 128
+        self.fastfood_layer = vardl.layers.BayesianFastfoodLinear(1, 16, nmc_train=32, nmc_test=128)
+        self.fastfood_layer2 = vardl.layers.BayesianFastfoodLinear(16, 16, nmc_train=32, nmc_test=128)
+        #self.fastfood_layer3 = vardl.layers.BayesianFastfoodLinear(16, 16)
         #self.fastfood_layer3 = BayesianFastfoodLinear(32)
         #self.fastfood_layer4 = BayesianFastfoodLinear(32)
-        self.fc = vardl.layers.BayesianLinear(64, 1, local_reparameterization=True, nmc_test=self.nmc, bias=False)
+        self.fc = vardl.layers.BayesianLinear(16, 1, local_reparameterization=True, nmc_train=32, nmc_test=128,
+                                              bias=False)
+        self.fc.prior_W._logvars.data.fill_(np.log(0.01))
         self.likelihood = vardl.likelihoods.Gaussian(dtype=torch.float32)
 
+        self.activation_function = torch.tanh
 
 
     def forward(self, input):
         x = input * torch.ones(self.fc.nmc, *input.size()).to(input.device)
         x = self.fastfood_layer(x)
-        x = torch.erf(x)
+        x = self.activation_function(x)
         x = self.fastfood_layer2(x)
-        x = torch.erf(x)
+        x = self.activation_function(x)
+        #x = self.fastfood_layer3(x)
+        #x = self.activation_function(x)
         #x = self.fastfood_layer3(x)
         #x = torch.erf(x)
         #x = self.fastfood_layer4(x)
@@ -161,7 +115,7 @@ def main():
 
     dataloader = DataLoader(TensorDataset(torch.from_numpy(gap_data).float(),
                                           torch.from_numpy(function(gap_data)).float()),
-                            batch_size=128,
+                            batch_size=1024,
                             shuffle=True,
                             num_workers=0,
                             pin_memory=True)
@@ -169,7 +123,7 @@ def main():
     tb_logger = vardl.logger.TensorboardLogger(model=model, directory='./workspace/')
     trainer = vardl.trainer.TrainerRegressor(model,
                                              optimizer='Adam',
-                                             optimizer_config={'lr': 1e-3},
+                                             optimizer_config={'lr': 2e-3},
                                              train_dataloader=dataloader,
                                              test_dataloader=dataloader,
                                              device='cpu',
@@ -177,9 +131,9 @@ def main():
                                              tb_logger=tb_logger)
     try:
         model.likelihood.log_noise_var.requires_grad = False
-        trainer.train_per_iterations(iterations=200000, train_verbose=True)
+        trainer.fit(iterations=25000, test_interval=500, train_verbose=False)
         model.likelihood.log_noise_var.requires_grad = True
-        trainer.train_per_iterations(iterations=100000, train_verbose=True)
+        trainer.fit(iterations=25000, test_interval=500, train_verbose=False)
     except KeyboardInterrupt:
         logger.warning('User interruption! Continue...')
     trainer.test()
