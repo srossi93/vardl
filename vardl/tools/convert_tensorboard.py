@@ -24,9 +24,12 @@ import time
 import humanize
 import argparse
 import os
+import logging
 
-
-logger = setup_logger('vardl', logging_path='/tmp/vardl')
+if __name__ != '__main__':
+    logger = logging.getLogger(__name__)
+else:
+    logger = setup_logger('vardl', logging_path='/tmp/vardl')
 
 
 def read_tbevents(filepath) -> EventAccumulator:
@@ -48,6 +51,8 @@ def save_tag(event_acc: EventAccumulator, tag, outdir, ext = '.csv'):
         np.savetxt(filename, raw_data, header='walltime step value')
     logger.info('Tag %s saved in %s (%s)' % (tag, filename,
                                              humanize.naturalsize(os.path.getsize(filename))))
+
+    return raw_data
 
 
 def main():

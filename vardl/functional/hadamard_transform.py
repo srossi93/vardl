@@ -39,10 +39,11 @@ def hadamard_transform_cpu(u, normalize=False):
     m = int(np.log2(n))
     if n != 1 << m:
         raise ValueError('d must be a power of 2')
-    x = u[..., np.newaxis]
+    x = u.unsqueeze(-1)#u[..., np.newaxis]
     for _ in range(m)[::-1]:
         x = torch.cat((x[..., ::2, :] + x[..., 1::2, :], x[..., ::2, :] - x[..., 1::2, :]), dim=-1)
-    x = x.squeeze(-2) / 2**(m / 2) if normalize else x.squeeze(-2)
+    #x = x.squeeze(-2) / 2**(m / 2) # if normalize else x.squeeze(-2)
+    x = x.squeeze(-2) # if normalize else x.squeeze(-2)
     #print(x.shape)
     return x
 

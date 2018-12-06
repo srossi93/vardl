@@ -7,7 +7,9 @@ import glob
 import pandas as pd
 
 import matplotlib2tikz
-
+import numpy as np
+import logging
+logger = logging.getLogger(__name__)
 
 class ExperimentPlotter():
     def __init__(self, name, basedir, methods, savepath):
@@ -168,12 +170,12 @@ class ExperimentPlotter():
         savepath = os.path.join(directory, filename)
 
         if verbose:
-            print("INFO - Saving figure to '%s'..." % savepath)
+            logger.info("Saving figure in '%s'..." % savepath)
 
         # Actually save the figure
         if ext == 'tex':
             tikz_code = matplotlib2tikz.get_tikz_code(savepath, figureheight='\\figureheight',
-                                                      figurewidth='\\figurewidth')
+                                                      figurewidth='\\figurewidth', show_info=False)
 
             wide_to_ascii = dict((i, chr(i - 0xfee0)) for i in range(0xff01, 0xff5f))
             wide_to_ascii.update({0x3000: u' ', 0x2212: u'-'})  # space and minus
@@ -191,3 +193,31 @@ class ExperimentPlotter():
         # Close it
         if close:
             plt.close()
+
+
+def tsplot(x, y, n=20, percentile_min=1, percentile_max=99, color='r', plot_mean=True, plot_median=False,
+           line_color='k', **kwargs):
+    # calculate the lower and upper percentile groups, skipping 50 percentile
+    perc1 = np.percentile(y, np.linspace(percentile_min, 50, num=n, endpoint=False), axis=0)
+    perc2 = np.percentile(y, np.linspace(50, percentile_max, num=n + 1)[1:], axis=0)
+
+    if 'alpha' in kwargs:
+        alpha = kwargs.pop('alpha')
+    else:
+        alpha = 0.9 / n
+
+    if 'ax' in kwargs:
+        ax = kwargs.pop('ax')
+    else:
+        ax = plt.gca()
+
+    label = kwargs.pop('label') if 'label' in kwargs else None
+
+    if plot_mean:
+        l, = ax.plot(x, np.mean(y, axis=0), label=label)
+
+    # fill lower and upper percentile groups
+    for p1, p2 in zip(perc1, perc2):
+        plt.fill_between(x, p1, p2, alpha=alpha, edgecolor=None, color=l.get_color())
+
+    return plt.gca()

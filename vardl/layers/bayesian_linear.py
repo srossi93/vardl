@@ -30,7 +30,7 @@ class BayesianLinear(BaseBayesianLayer):
                  out_features: int,
                  bias: bool = False,
                  approx: str = 'factorized',
-                 local_reparameterization: bool = False,
+                 local_reparameterization: bool = True,
                  nmc_train: int = 1,
                  nmc_test: int = 1,
                  dtype: torch.device = torch.float32,

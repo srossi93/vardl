@@ -19,9 +19,10 @@
 from .logsumexp import logsumexp  # noqa: F401
 from .set_seed import set_seed  # noqa: F401
 from .path_utils import next_path  # nopa: F401
-from .experiment_plotter import ExperimentPlotter
+from .experiment_plotter import ExperimentPlotter, tsplot
 from .glog import *
 from .timing import timing
+
 import argparse
 
 def str2bool(v):
