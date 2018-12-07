@@ -26,6 +26,7 @@ from .. import functional
 
 logger = logging.getLogger(__name__)
 
+
 class BayesianFastfoodLinear(BaseBayesianLayer):
     """
     Implements a Variational Fastfood linear layer using Fast Hadamard transform
@@ -59,7 +60,7 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
         self.times_to_stack_v = self.out_features // self.in_features
 
         # S vector
-        #self.S = torch.nn.Parameter(torch.randn(in_features))
+        # self.S = torch.nn.Parameter(torch.randn(in_features))
         self.q_S = distributions.MultivariateGaussianDistribution(self.in_features)
         self.prior_S = distributions.MultivariateGaussianDistribution(self.in_features)
         self.q_S.optimize()
@@ -110,12 +111,12 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
         logger.debug('input: %s' % str(input.size()))
         input = input.unsqueeze(-2) # Size: NMC x BS x 1 x D_in
         logger.debug('input unsqueezed: %s' % str(input.size()))
-        #input = torch.cat([input for _ in range(self.out_features//self.in_features)], dim=-1)
+        # input = torch.cat([input for _ in range(self.out_features//self.in_features)], dim=-1)
         logger.debug('B: %s' % str(self.B.size()))
-        Bx = (self.B * input)#.squeeze(-1) # Size: NMC x BS x D_out
+        Bx = (self.B * input)  # .squeeze(-1) # Size: NMC x BS x D_out
         logger.debug('Bx: %s' % str(Bx.size()))
 
-        HBx = functional.HadamardTransform.apply(Bx).view(self.nmc, batch_size, -1)#.squeeze(-1)
+        HBx = functional.HadamardTransform.apply(Bx).view(self.nmc, batch_size, -1)  # .squeeze(-1)
         logger.debug('HBx: %s' % str(HBx.size()))
 
         PHBx = HBx[..., self.P.long()]#.unsqueeze(-2)

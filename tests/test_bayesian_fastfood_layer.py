@@ -33,8 +33,10 @@ from vardl.tools.convert_tensorboard import read_tbevents
 
 logger = vardl.utils.setup_logger('vardl', '/tmp/', 'INFO')
 
+
 def function(x):
     return np.sin(x) + np.sin(x/2) + np.sin(x/3) - np.sin(x/4) + np.exp(-2) * np.random.rand(*x.shape)
+
 
 class FastfoodNet(vardl.models.BaseBayesianNet):
     def __init__(self, nfearures: int = 64, activation_function= torch.tanh):
@@ -51,7 +53,6 @@ class FastfoodNet(vardl.models.BaseBayesianNet):
         self.activation_function = activation_function
         self.name = 'BayesianFastfood'
 
-
     def forward(self, input):
         x = input * torch.ones(self.fastfood_layer.nmc, *input.size()).to(input.device)
         x = self.fastfood_layer(x)
@@ -61,6 +62,7 @@ class FastfoodNet(vardl.models.BaseBayesianNet):
         self.basis_functions = x
         x = self.fc(x)
         return x
+
 
 class BayesianNet(vardl.models.BaseBayesianNet):
     def __init__(self, nfeatures: int = 64, activation_function= torch.tanh):
@@ -76,7 +78,6 @@ class BayesianNet(vardl.models.BaseBayesianNet):
         self.activation_function = activation_function
         self.name = 'BayesianVanilla'
 
-
     def forward(self, input):
         x = input * torch.ones(self.linear_layer.nmc, *input.size()).to(input.device)
         x = self.linear_layer(x)
@@ -86,6 +87,7 @@ class BayesianNet(vardl.models.BaseBayesianNet):
         self.basis_functions = x
         x = self.fc(x)
         return x
+
 
 class MonteCarloNet(torch.nn.Module):
     def __init__(self, nfeatures: int = 64, activation_function= torch.tanh):
@@ -128,6 +130,9 @@ class MonteCarloNet(torch.nn.Module):
         return out
 
 
+# ******************* MAIN
+
+
 def main():
     plot = True
     vardl.utils.set_seed(122018)
@@ -135,9 +140,9 @@ def main():
     bayesian_fastfood_model = FastfoodNet()
     bayesian_linear_model = BayesianNet()
     montecarlo_model = MonteCarloNet()
-    #model.train()
 
     models = [bayesian_fastfood_model,bayesian_linear_model, montecarlo_model]
+
     for model in models:
         logger.info('Trainable parameters for %s model: %s' % (model.name,
                                                                model.trainable_parameters))
@@ -188,7 +193,6 @@ def main():
             ax.set_ylim(-4.5, 4.5)
             ax.set_title('1D Regression - %s' % model.name)
             ax.legend()
-            # TODO: savefig here
             vardl.utils.ExperimentPlotter.savefig('figures/demo1d/1D-' + model.name, 'pdf')
             vardl.utils.ExperimentPlotter.savefig('figures/demo1d/1D-' + model.name, 'tex')
 
@@ -199,7 +203,6 @@ def main():
             ax.set_title('Basis functions - %s' % model.name)
             vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'pdf')
             vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'tex')
-            # TODO: savefig here
 
     fig, (ax0, ax1) = plt.subplots(2, 1)
     for model, tb_directory_path in tb_summary_paths.items():
@@ -213,7 +216,6 @@ def main():
         ax1.plot(error_test[:, 1]+1, error_test[:, 2], label=model)
         ax1.set_title('Test Error')
         ax1.legend()
-    # TODO: savefig here
     ax0.semilogx()
     ax1.semilogx()
     vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'pdf')
