@@ -61,11 +61,11 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
 
         # S vector
         # self.S = torch.nn.Parameter(torch.randn(in_features))
-        self.q_S = distributions.MultivariateGaussianDistribution(self.in_features)
-        self.prior_S = distributions.MultivariateGaussianDistribution(self.in_features)
-        self.q_S.optimize()
-        self.q_G = distributions.MultivariateGaussianDistribution(self.in_features)
-        self.prior_G = distributions.MultivariateGaussianDistribution(self.in_features)
+        #self.q_S = distributions.MultivariateGaussianDistribution(self.in_features)
+        #self.prior_S = distributions.MultivariateGaussianDistribution(self.in_features)
+        #self.q_S.optimize()
+        self.q_G = distributions.MultivariateGaussianDistribution(self.in_features)#, self.times_to_stack_v)
+        self.prior_G = distributions.MultivariateGaussianDistribution(self.in_features)#, self.times_to_stack_v)
         self.q_G.optimize()
         # self.q_G = torch.nn.Parameter(torch.tensor(np.random.randn(in_features)).float())
 
@@ -88,7 +88,7 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
             self.prior_bias.logvars.fill_(np.log(0.01))
             self.q_bias.optimize()
 
-        self.prior_S.logvars.fill_(np.log(0.01))
+        #self.prior_S.logvars.fill_(np.log(0.01))
         self.prior_G.logvars.fill_(np.log(0.01))
 
     def forward(self, input: torch.Tensor):
@@ -106,7 +106,8 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
         # self.B.data = torch.tensor(np.random.choice((-1, 1), size=self.in_features)).float()
         batch_size = input.size(1)
         G = self.q_G.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
-        S = self.q_S.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
+        #print(G.size())
+        #S = self.q_S.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
 
         logger.debug('input: %s' % str(input.size()))
         input = input.unsqueeze(-2) # Size: NMC x BS x 1 x D_in
@@ -138,8 +139,8 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
 
     @property
     def dkl(self):
-        dkl = distributions.dkl.dkl_matrix_gaussian(self.q_S, self.prior_S)
-        dkl += distributions.dkl.dkl_matrix_gaussian(self.q_G, self.prior_G)
+        dkl = distributions.dkl.dkl_matrix_gaussian(self.q_G, self.prior_G)
+#        dkl += distributions.dkl.dkl_matrix_gaussian(self.q_S, self.prior_S)
         if self.bias:
             dkl += distributions.dkl.dkl_matrix_gaussian(self.q_bias, self.prior_bias)
         return dkl
