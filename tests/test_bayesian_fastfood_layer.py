@@ -35,7 +35,7 @@ logger = vardl.utils.setup_logger('vardl', '/tmp/', 'INFO')
 
 
 def function(x):
-    return np.sin(x) + np.sin(x/2) + np.sin(x/3) - np.sin(x/4) + np.exp(-2) * np.random.rand(*x.shape)
+    return np.sin(x) + np.sin(x/2) + np.sin(x/3) - np.sin(x/4) + np.exp(0) * np.random.rand(*x.shape)
 
 
 class FastfoodNet(vardl.models.BaseBayesianNet):
@@ -135,13 +135,14 @@ class MonteCarloNet(torch.nn.Module):
 
 def main():
     plot = True
-    vardl.utils.set_seed(122018)
+    save = True
+    vardl.utils.set_seed(12122018)
 
-    bayesian_fastfood_model = FastfoodNet()
-    bayesian_linear_model = BayesianNet()
-    montecarlo_model = MonteCarloNet()
+    bayesian_fastfood_model = FastfoodNet(64)
+    bayesian_linear_model = BayesianNet(64)
+    montecarlo_model = MonteCarloNet(64)
 
-    models = [bayesian_fastfood_model,bayesian_linear_model, montecarlo_model]
+    models = [bayesian_fastfood_model, bayesian_linear_model, montecarlo_model]
 
     for model in models:
         logger.info('Trainable parameters for %s model: %s' % (model.name,
@@ -151,33 +152,44 @@ def main():
     gap_data = np.delete(full_data, range(30, 80)).reshape(-1, 1)
     full_data = np.linspace(-12.5, 12.5, 1024).reshape(-1, 1)
 
-    dataloader = DataLoader(TensorDataset(torch.from_numpy(gap_data).float(),
-                                          torch.from_numpy(function(gap_data)).float()),
-                            batch_size=1024,
-                            shuffle=True,
-                            num_workers=0,
-                            pin_memory=True)
+    dataloader = DataLoader(
+        TensorDataset(torch.from_numpy(gap_data).float(),
+                      torch.from_numpy(function(gap_data)).float()),
+        batch_size=1024,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=True)
+
+    test_dataloader = DataLoader(
+        TensorDataset(torch.from_numpy(gap_data).float(),
+                      torch.from_numpy(function(gap_data)).float()),
+        batch_size=1024,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=True)
 
     tb_summary_paths = {}
 
     for model in models:  # type: torch.nn.Module
         logger.info('Training %s model' % model.name)
+        [logger.info('%s: %s' % (name, list(param.shape))) if param.requires_grad else 0 for name, param in
+                     model.named_parameters()]
         tb_logger = vardl.logger.TensorboardLogger(model=model, directory='./workspace/' + model.name + '/')
         tb_summary_paths[model.name] = tb_logger.directory
         trainer = vardl.trainer.TrainerRegressor(model,
                                                  optimizer='Adam',
                                                  optimizer_config={'lr': 2.5e-3},
                                                  train_dataloader=dataloader,
-                                                 test_dataloader=dataloader,
+                                                 test_dataloader=test_dataloader,
                                                  device='cpu',
                                                  seed=0,
                                                  tb_logger=tb_logger)
 
         try:
             model.likelihood.log_noise_var.requires_grad = False
-            trainer.fit(iterations=25000, test_interval=500, train_verbose=False)
+            trainer.fit(iterations=25000*2, test_interval=500, train_verbose=False)
             model.likelihood.log_noise_var.requires_grad = True
-            trainer.fit(iterations=15000, test_interval=500, train_verbose=False)
+            trainer.fit(iterations=15000*2, test_interval=500, train_verbose=False)
         except KeyboardInterrupt:
             logger.warning('User interruption! Stopping training...')
         trainer.test()
@@ -193,16 +205,18 @@ def main():
             ax.set_ylim(-4.5, 4.5)
             ax.set_title('1D Regression - %s' % model.name)
             ax.legend()
-            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/1D-' + model.name, 'pdf')
-            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/1D-' + model.name, 'tex')
+            if save:
+                vardl.utils.ExperimentPlotter.savefig('figures/demo1d/1D-' + model.name, 'pdf')
+                vardl.utils.ExperimentPlotter.savefig('figures/demo1d/1D-' + model.name, 'tex')
 
             fig, ax = plt.subplots()
             basis_functions = model.basis_functions.detach().numpy()
             ax.plot(full_data, basis_functions.mean(0), linewidth=.5)
             ax.set_ylim(-1.25, 1.25)
             ax.set_title('Basis functions - %s' % model.name)
-            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'pdf')
-            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'tex')
+            if save:
+                vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'pdf')
+                vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'tex')
 
     fig, (ax0, ax1) = plt.subplots(2, 1)
     for model, tb_directory_path in tb_summary_paths.items():
@@ -218,8 +232,9 @@ def main():
         ax1.legend()
     ax0.semilogx()
     ax1.semilogx()
-    vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'pdf')
-    vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'tex')
+    if save:
+        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'pdf')
+        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'tex')
 
     fig, (ax0, ax1) = plt.subplots(2, 1)
     for model, tb_directory_path in tb_summary_paths.items():
@@ -237,8 +252,9 @@ def main():
     ax0.semilogx()
     ax1.semilogx()
     # TODO: savefig here
-    vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'pdf')
-    vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'tex')
+    if save:
+        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'pdf')
+        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'tex')
 
     plt.show()
     return 1
