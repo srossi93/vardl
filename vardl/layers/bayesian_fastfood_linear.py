@@ -58,12 +58,20 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
 
 
         self.times_to_stack_v = self.out_features // self.in_features
-
+        
+        next_power_of_two = int(np.power(2, np.floor(np.log2(self.in_features)) + 1))
+        if next_power_of_two == self.in_features * 2:
+            self.features_to_pad = 0
+        else:
+            self.features_to_pad = next_power_of_two - self.in_features
+            self.in_features = next_power_of_two
+            logger.warning("Input space is not a power of 2. Zero padding of %d features" % self.features_to_pad)
         # S vector
         # self.S = torch.nn.Parameter(torch.randn(in_features))
         #self.q_S = distributions.MultivariateGaussianDistribution(self.in_features)
         #self.prior_S = distributions.MultivariateGaussianDistribution(self.in_features)
         #self.q_S.optimize()
+
         self.q_G = distributions.MultivariateGaussianDistribution(self.in_features)#, self.times_to_stack_v)
         self.prior_G = distributions.MultivariateGaussianDistribution(self.in_features)#, self.times_to_stack_v)
         self.q_G.optimize()
@@ -73,10 +81,15 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
                                                                                  self.in_features])).float(),
                                     requires_grad=False)
 
+        #self.q_B = distributions.MultivariateBernoulliDistribution(self.in_features)
+        #self.prior_B = distributions.MultivariateBernoulliDistribution(self.in_features)
+        #self.q_B.optimize()
+
+
         #self.P = torch.nn.Parameter(torch.Tensor(np.random.permutation(self.out_features)), requires_grad=False)
         self.P = torch.nn.Parameter(
             torch.from_numpy(
-                np.hstack([(i * self.in_features) + np.random.permutation(self.in_features) for i in range(
+                np.hstack([np.random.permutation(self.in_features) for i in range(
                     self.times_to_stack_v)])
             ), requires_grad=False)
 #        logger.debug(str(self.P))
@@ -89,58 +102,73 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
             self.q_bias.optimize()
 
         #self.prior_S.logvars.fill_(np.log(0.01))
-        self.prior_G.logvars.fill_(np.log(0.01))
+        self.prior_G.logvars.fill_(np.log(0.1))
 
     def forward(self, input: torch.Tensor):
         """
         Perform Vx + b
         Parameters
         ----------
-        input torch.Tensor: Input tensor with size (NMC x BS x D_in)
+        input: torch.Tensor Input tensor with size (NMC x BS x D_in)
 
-        Returns
-        -------
+
 
         """
         # self.P.data = torch.tensor(np.random.permutation(self.in_features))
         # self.B.data = torch.tensor(np.random.choice((-1, 1), size=self.in_features)).float()
         batch_size = input.size(1)
-        G = self.q_G.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
-        #print(G.size())
-        #S = self.q_S.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
+        #G = self.q_G.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
+        G = self.q_G.sample(self.nmc * self.times_to_stack_v).view(self.nmc, 1, -1)
+        B = self.B.view(-1)
+#        B = self.q_B.sample(self.nmc * self.times_to_stack_v).view(self.nmc, 1, -1)
+#        S = self.q_S.sample(self.nmc * self.times_to_stack_v).view(self.nmc, 1, -1)
 
-        logger.debug('input: %s' % str(input.size()))
-        input = input.unsqueeze(-2) # Size: NMC x BS x 1 x D_in
-        logger.debug('input unsqueezed: %s' % str(input.size()))
-        # input = torch.cat([input for _ in range(self.out_features//self.in_features)], dim=-1)
-        logger.debug('B: %s' % str(self.B.size()))
-        Bx = (self.B * input)  # .squeeze(-1) # Size: NMC x BS x D_out
-        logger.debug('Bx: %s' % str(Bx.size()))
+        input = torch.nn.functional.pad(input, (0, self.features_to_pad), 'constant', 0)
+
+        # print(G.size())
+        # S = self.q_S.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
+
+        # logger.debug('input: %s' % str(input.size()))
+        # input = input.unsqueeze(-1)  # Size: NMC x BS x 1 x D_in
+        # logger.debug('input unsqueezed: %s' % str(input.size()))
+
+        # logger.debug('B: %s' % str(B.size()))
+        Bx = (B * input).view(self.nmc, batch_size, self.times_to_stack_v, -1)
+
+        # logger.debug('Bx: %s' % str(Bx.size()))
 
         HBx = functional.HadamardTransform.apply(Bx).view(self.nmc, batch_size, -1)  # .squeeze(-1)
-        logger.debug('HBx: %s' % str(HBx.size()))
+        # logger.debug('HBx: %s' % str(HBx.size()))
 
-        PHBx = HBx[..., self.P.long()]#.unsqueeze(-2)
-        logger.debug('PHBx: %s' % str(PHBx.size()))
-        #logger.info(PHBx.size())
+        PHBx = HBx[..., self.P.long()]  # .unsqueeze(-1)
+        # logger.debug('PHBx: %s' % str(PHBx.size()))
 
-        logger.debug('G: %s' % str(G.size()))
-        GPHBx = G * PHBx
-        logger.debug('GPHBx: %s' % str(GPHBx.size()))
-        HGPHBx = functional.HadamardTransform.apply(GPHBx)
-        logger.debug('HGPHBx: %s' % str(HGPHBx.size()))
-        #logger.info(HGPHBx.size())
-        logger.debug('S: %s' % str(G.size()))
+        # logger.debug('G: %s' % str(G.size()))
+        GPHBx = (G * PHBx).view(self.nmc, batch_size, self.times_to_stack_v, -1)
+        # logger.debug('GPHBx: %s' % str(GPHBx.size()))
+        HGPHBx = functional.HadamardTransform.apply(GPHBx).view(self.nmc, batch_size, -1)
+        # logger.debug('HGPHBx: %s' % str(HGPHBx.size()))
+        # logger.info(HGPHBx.size())
+        # logger.debug('S: %s' % str(G.size()))
+        SHGPHBx = HGPHBx  # (S * HGPHBx)
+
 
         if self.bias:
-            return (HGPHBx) + self.q_bias.sample(self.nmc * batch_size).view(self.nmc, batch_size, -1)
+            return (SHGPHBx) + self.q_bias.sample(self.nmc * batch_size).view(self.nmc, batch_size, -1)
         else:
-            return HGPHBx
+            return SHGPHBx.view(self.nmc, batch_size, -1)
 
     @property
     def dkl(self):
         dkl = distributions.dkl.dkl_matrix_gaussian(self.q_G, self.prior_G)
+        #dkl += distributions.dkl.dkl_bernoulli(self.q_B, self.prior_B)
+        #   dkl += distributions.dkl.dkl_matrix_gaussian(self.q_S, self.prior_S)
 #        dkl += distributions.dkl.dkl_matrix_gaussian(self.q_S, self.prior_S)
         if self.bias:
             dkl += distributions.dkl.dkl_matrix_gaussian(self.q_bias, self.prior_bias)
         return dkl
+
+    def extra_repr(self):
+        string = r"""in_features={}, in_features={}, bias={}""".format(
+            self.in_features, self.out_features, self.bias)
+        return string
