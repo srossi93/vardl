@@ -57,8 +57,7 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
             raise NotImplementedError('Corner case to handle')
 
 
-        self.times_to_stack_v = self.out_features // self.in_features
-        
+
         next_power_of_two = int(np.power(2, np.floor(np.log2(self.in_features)) + 1))
         if next_power_of_two == self.in_features * 2:
             self.features_to_pad = 0
@@ -66,6 +65,7 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
             self.features_to_pad = next_power_of_two - self.in_features
             self.in_features = next_power_of_two
             logger.warning("Input space is not a power of 2. Zero padding of %d features" % self.features_to_pad)
+        self.times_to_stack_v = self.out_features // self.in_features
         # S vector
         # self.S = torch.nn.Parameter(torch.randn(in_features))
         #self.q_S = distributions.MultivariateGaussianDistribution(self.in_features)
@@ -75,6 +75,9 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
         self.q_G = distributions.MultivariateGaussianDistribution(self.in_features)#, self.times_to_stack_v)
         self.prior_G = distributions.MultivariateGaussianDistribution(self.in_features)#, self.times_to_stack_v)
         self.q_G.optimize()
+        self.prior_G.logvars.fill_(np.log(0.1))
+
+
         # self.q_G = torch.nn.Parameter(torch.tensor(np.random.randn(in_features)).float())
 
         self.B = torch.nn.Parameter(torch.Tensor(np.random.choice((-1, 1), size=[self.times_to_stack_v,
@@ -102,7 +105,6 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
             self.q_bias.optimize()
 
         #self.prior_S.logvars.fill_(np.log(0.01))
-        self.prior_G.logvars.fill_(np.log(0.1))
 
     def forward(self, input: torch.Tensor):
         """
@@ -119,26 +121,28 @@ class BayesianFastfoodLinear(BaseBayesianLayer):
         batch_size = input.size(1)
         #G = self.q_G.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
         G = self.q_G.sample(self.nmc * self.times_to_stack_v).view(self.nmc, 1, -1)
-        B = self.B.view(-1)
+        B = self.B#.view(-1)
 #        B = self.q_B.sample(self.nmc * self.times_to_stack_v).view(self.nmc, 1, -1)
 #        S = self.q_S.sample(self.nmc * self.times_to_stack_v).view(self.nmc, 1, -1)
 
-        input = torch.nn.functional.pad(input, (0, self.features_to_pad), 'constant', 0)
+        input = torch.nn.functional.pad(input, (0, self.features_to_pad), 'constant', 0).unsqueeze(-2)
 
         # print(G.size())
         # S = self.q_S.sample(self.nmc * batch_size * self.times_to_stack_v).view(self.nmc, batch_size, -1)
 
-        # logger.debug('input: %s' % str(input.size()))
+        #logger.debug('input: %s' % str(input.size()))
         # input = input.unsqueeze(-1)  # Size: NMC x BS x 1 x D_in
         # logger.debug('input unsqueezed: %s' % str(input.size()))
 
         # logger.debug('B: %s' % str(B.size()))
+        #print(self.B.size())
+
         Bx = (B * input).view(self.nmc, batch_size, self.times_to_stack_v, -1)
 
-        # logger.debug('Bx: %s' % str(Bx.size()))
+        #logger.debug('Bx: %s' % str(Bx.size()))
 
         HBx = functional.HadamardTransform.apply(Bx).view(self.nmc, batch_size, -1)  # .squeeze(-1)
-        # logger.debug('HBx: %s' % str(HBx.size()))
+        #logger.debug('HBx: %s' % str(HBx.size()))
 
         PHBx = HBx[..., self.P.long()]  # .unsqueeze(-1)
         # logger.debug('PHBx: %s' % str(PHBx.size()))
