@@ -50,7 +50,8 @@ class BaseBayesianNet(nn.Module):
 
     @property
     def trainable_parameters(self):
-        return humanize.intword(sum(p.numel() for p in self.parameters() if p.requires_grad))
+        #return humanize.intword(sum(p.numel() for p in self.parameters() if p.requires_grad))
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def save_model(self, path):
         self._logger.info('Saving model in %s' % path)
