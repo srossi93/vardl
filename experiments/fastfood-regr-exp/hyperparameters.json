@@ -1,0 +1,12 @@
+{
+  "bin": "python3",
+  "executable": "/mnt/workspace/research/vardl/fastfood-regr-exp/main.py",
+  "hyperparameters": {
+    "dataset": ["yacht", "boston", "concrete", "energy", "kin8nm", "naval", "powerplant", "protein"],
+    "dataset_dir": "sdd",
+    "nlayers": [2, 5, 10],
+    "nfeature": [64, 256, 1024],
+    "model": ["mcd", "fastfood", "vanilla"]
+
+  }
+}
