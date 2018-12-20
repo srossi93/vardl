@@ -17,6 +17,7 @@
 import torch
 
 from . import MatrixGaussianDistribution
+from . import MultivariateBernoulliDistribution
 
 
 def dkl_matrix_gaussian(q: MatrixGaussianDistribution,
@@ -153,3 +154,9 @@ def _dkl_gaussian_q_lowrank_p_diag(mu_q: torch.Tensor,
 
 
     return 0
+
+
+def dkl_bernoulli(q: MultivariateBernoulliDistribution,
+                  p: MultivariateBernoulliDistribution):
+
+    return torch.sum(q.logp.exp() * torch.log(q.logp.exp() / p.logp.exp()) + (1 - q.logp.exp()) * torch.log((1-q.logp.exp()) / (1-p.logp.exp())))

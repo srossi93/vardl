@@ -30,4 +30,7 @@ class BaseDistribution(nn.Module):
         NotImplementedError("Subclass should implement this.")
 
     def optimize(self, train: bool = True):
-        NotImplementedError("Subclass should implement this.")
+        for param in self.parameters():
+            param.requires_grad = train
+    #def optimize(self, train: bool = True):
+    #    NotImplementedError("Subclass should implement this.")

@@ -75,7 +75,7 @@ class MultivariateGaussianDistribution(BaseDistribution):
         self._logvars = nn.Parameter(
             torch.ones(self.n,    #
                        dtype=dtype,
-                       device=self.device) * np.log(1. / self.n),
+                       device=self.device) * np.log(1. / (self.n + 1)),
             requires_grad=False)
 
         if self.approx == 'full':
