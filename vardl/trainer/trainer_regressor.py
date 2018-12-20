@@ -170,6 +170,7 @@ class TrainerRegressor():
 
         self.tb_logger.scalar_summary('nell/test', test_nell, self.current_iteration)
         self.tb_logger.scalar_summary('error/test', test_error, self.current_iteration)
+        return test_nell, test_error
 
     def fit(self,
             iterations: int,
