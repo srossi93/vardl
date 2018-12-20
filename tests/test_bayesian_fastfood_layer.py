@@ -23,6 +23,7 @@ import scipy.linalg
 import time
 
 import matplotlib
+import matplotlib.figure
 #matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, TensorDataset
@@ -31,22 +32,26 @@ import humanize
 import vardl
 from vardl.tools.convert_tensorboard import read_tbevents
 
-logger = vardl.utils.setup_logger('vardl', '/tmp/', 'INFO')
+logger = vardl.utils.setup_logger('vardl', './logs/', 'INFO')
 
 
 def function(x):
-    return np.sin(x) + np.sin(x/2) + np.sin(x/3) - np.sin(x/4) + np.exp(0) * np.random.rand(*x.shape)
+
+    return np.sin(x) + np.sin(x/2) + np.sin(x/3) - np.sin(x/4) + np.exp(-1) * np.random.rand(*x.shape)
 
 
 class FastfoodNet(vardl.models.BaseBayesianNet):
     def __init__(self, nfearures: int = 64, activation_function= torch.tanh):
         super(FastfoodNet, self).__init__()
 #        self.nmc = 128
-        nmc_test = 1024
-        self.fastfood_layer = vardl.layers.BayesianFastfoodLinear(1, nfearures, nmc_train=1, nmc_test=nmc_test)
-        self.fastfood_layer2 = vardl.layers.BayesianFastfoodLinear(nfearures, nfearures, nmc_train=1, nmc_test=nmc_test)
-        self.fc = vardl.layers.BayesianLinear(nfearures, 1, local_reparameterization=True, nmc_train=1, nmc_test=nmc_test,
-                                               bias=False)
+        nmc_train = 1
+        nmc_test = 512
+        self.fastfood_layer = vardl.layers.BayesianFastfoodLinear(1, nfearures, bias=True,  nmc_train=nmc_train,
+                                                                  nmc_test=nmc_test)
+        self.fastfood_layer2 = vardl.layers.BayesianFastfoodLinear(nfearures, nfearures, bias=True, nmc_train=nmc_train,
+                                                                   nmc_test=nmc_test)
+        self.fc = vardl.layers.BayesianLinear(nfearures, 1, local_reparameterization=True, nmc_train=nmc_train,
+                                              nmc_test=nmc_test, bias=True)
 #        self.fc.prior_W._logvars.data.fill_(np.log(0.01))
         self.likelihood = vardl.likelihoods.Gaussian(dtype=torch.float32)
 
@@ -134,15 +139,18 @@ class MonteCarloNet(torch.nn.Module):
 
 
 def main():
+
     plot = True
-    save = True
+    save = False
     vardl.utils.set_seed(12122018)
 
-    bayesian_fastfood_model = FastfoodNet(64)
-    bayesian_linear_model = BayesianNet(64)
-    montecarlo_model = MonteCarloNet(64)
+    torch.set_num_threads(-2)
 
-    models = [bayesian_fastfood_model, bayesian_linear_model, montecarlo_model]
+    bayesian_fastfood_model = FastfoodNet(256)
+    bayesian_linear_model = BayesianNet(32)
+    montecarlo_model = MonteCarloNet(32)
+
+    models = [bayesian_fastfood_model]#, bayesian_linear_model, montecarlo_model]
 
     for model in models:
         logger.info('Trainable parameters for %s model: %s' % (model.name,
@@ -150,7 +158,7 @@ def main():
 
     full_data = np.linspace(-10, 10, 256).reshape(-1, 1)
     gap_data = np.delete(full_data, range(30, 80)).reshape(-1, 1)
-    full_data = np.linspace(-12.5, 12.5, 1024).reshape(-1, 1)
+    full_data = np.linspace(-12.5, 13.5, 1024).reshape(-1, 1)
 
     dataloader = DataLoader(
         TensorDataset(torch.from_numpy(gap_data).float(),
@@ -172,13 +180,14 @@ def main():
 
     for model in models:  # type: torch.nn.Module
         logger.info('Training %s model' % model.name)
-        [logger.info('%s: %s' % (name, list(param.shape))) if param.requires_grad else 0 for name, param in
-                     model.named_parameters()]
+        [logger.info('%s: %s' % (name, list(param.shape))) if param.requires_grad else 0
+         for name, param in model.named_parameters()]
+
         tb_logger = vardl.logger.TensorboardLogger(model=model, directory='./workspace/' + model.name + '/')
         tb_summary_paths[model.name] = tb_logger.directory
         trainer = vardl.trainer.TrainerRegressor(model,
                                                  optimizer='Adam',
-                                                 optimizer_config={'lr': 2.5e-3},
+                                                 optimizer_config={'lr': 5e-3},
                                                  train_dataloader=dataloader,
                                                  test_dataloader=test_dataloader,
                                                  device='cpu',
@@ -187,12 +196,16 @@ def main():
 
         try:
             model.likelihood.log_noise_var.requires_grad = False
-            trainer.fit(iterations=25000*2, test_interval=500, train_verbose=False)
-            model.likelihood.log_noise_var.requires_grad = True
-            trainer.fit(iterations=15000*2, test_interval=500, train_verbose=False)
+            trainer.fit(iterations=15000, test_interval=500, train_verbose=True, time_budget=120)
+            #model.likelihood.log_noise_var.requires_grad = True
+            #trainer.fit(iterations=15000*3, test_interval=500, train_verbose=True)
         except KeyboardInterrupt:
             logger.warning('User interruption! Stopping training...')
         trainer.test()
+
+    #logger.info(bayesian_fastfood_model.fastfood_layer.q_B.logp.data.exp())
+    #logger.info(bayesian_fastfood_model.fastfood_layer2.q_B.logp.data.exp())
+
 
     if plot:
         for model in models:  # type: torch.nn.Module
@@ -218,43 +231,65 @@ def main():
                 vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'pdf')
                 vardl.utils.ExperimentPlotter.savefig('figures/demo1d/basis_function-' + model.name, 'tex')
 
-    fig, (ax0, ax1) = plt.subplots(2, 1)
-    for model, tb_directory_path in tb_summary_paths.items():
-        ea = read_tbevents(tb_directory_path)
-        nell_test = np.array(ea.Scalars('nell/test'))
-        ax0.plot(nell_test[:, 1]+1, nell_test[:, 2], label=model)
-        ax0.set_title('Test MNLL')
+        fig, (ax0, ax1) = plt.subplots(2, 1)
+        for model, tb_directory_path in tb_summary_paths.items():
+            ea = read_tbevents(tb_directory_path)
+            nell_test = np.array(ea.Scalars('nell/test'))
+            ax0.plot(nell_test[:, 1]+1, nell_test[:, 2], label=model)
+            ax0.set_title('Test MNLL')
+            ax0.legend()
+
+            error_test = np.array(ea.Scalars('error/test'))
+            ax1.plot(error_test[:, 1]+1, error_test[:, 2], label=model)
+            ax1.set_title('Test Error')
+            ax1.legend()
+        ax0.semilogx()
+        ax1.semilogx()
+        if save:
+            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'pdf')
+            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'tex')
+
+        fig, (ax0, ax1) = plt.subplots(2, 1)
+        for model, tb_directory_path in tb_summary_paths.items():
+            ea = read_tbevents(tb_directory_path)
+            nell_train = np.array(ea.Scalars('nell/train'))
+            ax0.plot(nell_train[:, 1], nell_train[:, 2], label=model)
+
+            error_train = np.array(ea.Scalars('error/train'))
+            ax1.plot(error_train[:, 1], error_train[:, 2], label=model)
+
+        ax0.set_title('Train MNLL')
+        ax1.set_title('Train Error')
         ax0.legend()
-
-        error_test = np.array(ea.Scalars('error/test'))
-        ax1.plot(error_test[:, 1]+1, error_test[:, 2], label=model)
-        ax1.set_title('Test Error')
         ax1.legend()
-    ax0.semilogx()
-    ax1.semilogx()
-    if save:
-        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'pdf')
-        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/test_curves', 'tex')
+        ax0.semilogx()
+        ax1.semilogx()
+        # TODO: savefig here
+        if save:
+            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'pdf')
+            vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'tex')
 
-    fig, (ax0, ax1) = plt.subplots(2, 1)
-    for model, tb_directory_path in tb_summary_paths.items():
-        ea = read_tbevents(tb_directory_path)
-        nell_train = np.array(ea.Scalars('nell/train'))
-        ax0.plot(nell_train[:, 1], nell_train[:, 2], label=model)
 
-        error_train = np.array(ea.Scalars('error/train'))
-        ax1.plot(error_train[:, 1], error_train[:, 2], label=model)
+    if False:
+        fig, axs = plt.subplots(1, 8, figsize=[20, 3])  # type: matplotlib.figure.Figure, list
 
-    ax0.set_title('Train MNLL')
-    ax1.set_title('Train Error')
-    ax0.legend()
-    ax1.legend()
-    ax0.semilogx()
-    ax1.semilogx()
-    # TODO: savefig here
-    if save:
-        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'pdf')
-        vardl.utils.ExperimentPlotter.savefig('figures/demo1d/train_curves', 'tex')
+        weights = bayesian_fastfood_model.fastfood_layer(torch.eye(1)).detach().numpy()
+
+        for i in range(8):
+            axs[i].hist(weights[:, 0, i], bins='auto', density=True)
+
+        fig.tight_layout(h_pad=0.7)
+
+        weights = bayesian_fastfood_model.fastfood_layer2(torch.eye(8)).detach().numpy()
+        fig, axs = plt.subplots(8, 8, figsize=[20, 20])  # type: matplotlib.figure.Figure, list
+
+        for i in range(8):
+            for j in range(8):
+                axs[j][i].hist(weights[:, j, i], bins='auto', density=True)
+
+        fig.tight_layout(h_pad=-0.7)
+
+
 
     plt.show()
     return 1
