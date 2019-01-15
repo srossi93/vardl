@@ -18,6 +18,7 @@ r"""
 from typing import Dict
 
 import torch
+import time
 import torch.nn as nn
 import torch.optim as optim
 from termcolor import colored
@@ -26,6 +27,7 @@ from torch.utils.data import DataLoader
 from ..layers import BaseBayesianLayer, BayesianConv2d, BayesianLinear
 from ..logger import TensorboardLogger
 from ..utils import set_seed
+from ..utils.exception import VardlRunningTimeException
 import logging
 
 class TrainerClassifier():
@@ -277,10 +279,11 @@ class TrainerClassifier():
         return test_nell, test_error
 
     def fit(self, iterations: int, test_interval: int,
-            train_verbose: bool, train_log_interval: int = 1000):
+            train_verbose: bool, train_log_interval: int = 1000, time_budget=120):
 
         best_test_nell, best_test_error = self.test()
 
+        t_start = time.time()
         try:
             for _ in range(iterations // test_interval):
 
@@ -294,8 +297,12 @@ class TrainerClassifier():
                     best_test_error = test_error
                     best_test_nell = test_nell
 
+
+
                 # Adjust learning rate
                 self.__adjust_learning_rate()
+                if (time.time() - t_start) / 60 > time_budget:
+                    raise VardlRunningTimeException('Interrupting training due to time budget elapsed')
 
             test_nell, test_error = self.test()
             self.tb_logger.save_model('_final')
@@ -304,7 +311,11 @@ class TrainerClassifier():
         except KeyboardInterrupt:
             self._logger.warning('Training interruped by user. Saving current model snapshot')
             self.tb_logger.save_model('_interruped')
+            return self.test()
 
+        except VardlRunningTimeException as e:
+            self._logger.warning(e)
+            return self.test()
 
     def __adjust_learning_rate(self):
         gamma = self.lr_decay_config['gamma']# 0.0001

@@ -223,7 +223,7 @@ class MCDropoutNet(torch.nn.Module):
 
     @property
     def trainable_parameters(self):
-        return humanize.intword(sum(p.numel() for p in self.parameters() if p.requires_grad))
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def forward(self, input):
         out = torch.zeros(self.nmc, input.size(0), 1).to(input.device)
@@ -281,7 +281,8 @@ def parse_args():
                         help='Learning rate for training', )
     parser.add_argument('--model', choices=available_models, type=str, required=True,
                         help='Type of Bayesian model')
-    parser.add_argument('--outdir', type=str, default='workspace/',
+    parser.add_argument('--outdir', type=str,
+                        default='workspace/',
                         help='Output directory base path',)
     parser.add_argument('--seed', type=int, default=2018,
                         help='Random seed',)
@@ -291,14 +292,14 @@ def parse_args():
                         help='Training iteration with noise optimization')
     parser.add_argument('--test_interval', type=int, default=500,
                         help='Interval between testing')
-    parser.add_argument('--time_budget', type=int, default=480,
+    parser.add_argument('--time_budget', type=int, default=720,
                         help='Time budget in minutes')
 
 
     args = parser.parse_args()
 
-    args.dataset_dir = os.path.abspath(os.path.dirname(__file__) + args.dataset_dir)+'/'
-    args.outdir = os.path.abspath(os.path.dirname(__file__) + args.outdir)+'/'
+    args.dataset_dir = os.path.abspath(args.dataset_dir)+'/'
+    args.outdir = os.path.abspath(args.outdir)+'/'
 
     return args
 
@@ -384,6 +385,7 @@ if __name__ == '__main__':
     results['trainable_parameters'] = model.trainable_parameters
     results['test_mnll'] = float(test_mnll.item())
     results['test_error'] = float(test_error.item())
+    results['total_iters'] = trainer.current_iteration
 
     with open(outdir + 'results.json', 'w') as fp:
         json.dump(results, fp, sort_keys=True, indent=4)

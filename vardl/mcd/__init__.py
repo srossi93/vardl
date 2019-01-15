@@ -17,3 +17,4 @@
 from .lenet_nmc import LeNetMNC_MNIST, LeNetMNC_CIFAR10
 from .alexnet_mcd import AlexNetMCD_CIFAR10
 from .lenet_betadropout import LeNetBeta_MNIST, LeNetBeta_CIFAR10
+from .vgg16_mcd import VGG16MCD_CIFAR10

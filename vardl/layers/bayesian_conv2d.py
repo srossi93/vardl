@@ -162,16 +162,19 @@ class BayesianConv2d(BaseBayesianLayer):
 
         if self.local_reparameterization and self.approx == 'factorized':
 
+
             mean_weights = self.q_posterior_W.mean.view(self.out_channels, self.in_channels, self.kernel_size,
                                                         self.kernel_size)
             logvars_weights = self.q_posterior_W.logvars.view(self.out_channels, self.in_channels, self.kernel_size,
                                                         self.kernel_size)
 
             input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
+            print(input.size())
             mean_output = torch.nn.functional.conv2d(input, mean_weights,
                                                 stride=self.stride,
                                                 padding=self.padding,
                                                 dilation=self.dilation)
+            print(self.out_channels)
 
             var_output = torch.nn.functional.conv2d(input.pow(2), logvars_weights.exp(),
                                                      stride=self.stride,

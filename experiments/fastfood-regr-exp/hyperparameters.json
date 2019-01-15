@@ -1,12 +1,12 @@
 {
   "bin": "python3",
-  "executable": "/mnt/workspace/research/vardl/fastfood-regr-exp/main.py",
+  "executable": "/mnt/workspace/research/vardl/experiments/fastfood-regr-exp/main.py",
   "hyperparameters": {
+    "dataset_dir": ["/mnt/workspace/research/datasets.gitlab/export"],
+    "outdir": ["/mnt/workspace/research/vardl/experiments/fastfood-regr-exp/workspace"],
     "dataset": ["yacht", "boston", "concrete", "energy", "kin8nm", "naval", "powerplant", "protein"],
-    "dataset_dir": "sdd",
     "nlayers": [2, 5, 10],
-    "nfeature": [64, 256, 1024],
-    "model": ["mcd", "fastfood", "vanilla"]
-
+    "nfeature": [64, 128, 256],
+    "model": ["mcd", "fastfood", "bnn"]
   }
 }
