@@ -169,12 +169,10 @@ class BayesianConv2d(BaseBayesianLayer):
                                                         self.kernel_size)
 
             input = input.contiguous().view(-1, self.in_channels, self.in_height, self.in_width)
-            print(input.size())
             mean_output = torch.nn.functional.conv2d(input, mean_weights,
                                                 stride=self.stride,
                                                 padding=self.padding,
                                                 dilation=self.dilation)
-            print(self.out_channels)
 
             var_output = torch.nn.functional.conv2d(input.pow(2), logvars_weights.exp(),
                                                      stride=self.stride,
@@ -182,7 +180,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                      dilation=self.dilation)
 
             eps = torch.randn_like(mean_output, requires_grad=False)
-            output = mean_output + eps * torch.sqrt(var_output + 1e-5)
+            output = mean_output + eps * torch.sqrt(var_output + 1e-2)
 
             return output.view(self.nmc, -1, self.out_channels, self.out_height, self.out_width)
 
