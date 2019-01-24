@@ -79,7 +79,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                   device=self.device)
 
         #self.prior_W.logvars.data.fill_(0.3)#0.25
-        self.prior_W.logvars.data.fill_(np.log(.1))
+        self.prior_W.logvars.data.fill_(np.log(.001))
 
         self.q_posterior_W = MatrixGaussianDistribution(n=self.filter_size,
                                                         m=self.out_channels,
@@ -174,7 +174,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                 padding=self.padding,
                                                 dilation=self.dilation)
 
-            var_output = torch.nn.functional.conv2d(input.pow(2), logvars_weights.exp(),
+            var_output = torch.nn.functional.conv2d(input * input, (logvars_weights).exp(),
                                                      stride=self.stride,
                                                      padding=self.padding,
                                                      dilation=self.dilation)
@@ -189,7 +189,7 @@ class BayesianConv2d(BaseBayesianLayer):
                                                             in_data = input,
                                                             out_channels = self.out_channels,
                                                             in_channels = self.in_channels,
-                                                            in_height = self.in_height,
+                                                           # in_height = self.in_height,
                                                             in_width = self.in_width,
                                                             kernel_size= self.kernel_size,
                                                             stride = self.stride,

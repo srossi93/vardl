@@ -19,6 +19,7 @@ from typing import Dict
 
 import torch
 import time
+import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 from termcolor import colored
@@ -27,7 +28,7 @@ from torch.utils.data import DataLoader
 from ..layers import BaseBayesianLayer, BayesianConv2d, BayesianLinear
 from ..logger import TensorboardLogger
 from ..utils import set_seed
-from ..utils.exception import VardlRunningTimeException
+from ..utils.exception import VardlRunningTimeException, VardlNaNLossException
 import logging
 
 class TrainerClassifier():
@@ -84,6 +85,8 @@ class TrainerClassifier():
         # print('Add graph')
         # self.tb_logger.writer.add_graph(self.model, (dummy_input, ), True)
 
+        self.debug = False
+
 
     def compute_nell(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
                      n: int, m: int) -> torch.Tensor:
@@ -91,9 +94,12 @@ class TrainerClassifier():
             torch.sum(torch.mean(self.model.likelihood.log_cond_prob(Y_true, Y_pred), 0))
         return nell
 
+    def compute_kl(self):
+        return self.model.dkl * .1/(1 + np.exp(-0.00125 * (self.current_iteration - 30000))) #4500 ok
+
     def compute_loss(self, Y_pred: torch.Tensor, Y_true: torch.Tensor,
                      n: int, m: int) -> torch.Tensor:
-        return self.compute_nell(Y_pred, Y_true, n, m) + (self.model.dkl)
+        return self.compute_nell(Y_pred, Y_true, n, m) + self.compute_kl()
 
     def compute_error(self, Y_pred: torch.Tensor, Y_true: torch.Tensor) -> torch.Tensor:
 
@@ -111,18 +117,31 @@ class TrainerClassifier():
     def train_batch(self, data: torch.Tensor, target: torch.Tensor,
                     train_verbose: bool, train_log_interval: int):
 
+
         self.current_iteration += 1
 
         data, target = data.to(self.device), target.to(self.device)
 
         self.optimizer.zero_grad()
-        output = self.model(data)
 
-        loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
-        error = self.compute_error(output, target)
-        loss.backward()
+        if self.debug:
+            with torch.autograd.detect_anomaly():
+                output = self.model(data)
 
-        #torch.nn.utils.clip_grad_norm_(self.model.parameters(), 100000)
+                loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
+                error = self.compute_error(output, target)
+                loss.backward()
+        else:
+            output = self.model(data)
+
+            loss = self.compute_loss(output, target, len(self.train_dataloader.dataset), data.size(0))
+            error = self.compute_error(output, target)
+            loss.backward()
+
+        if torch.isnan(loss):
+            self._logger.error('At step %d loss became NaN. Run with debug flag to investigate where it was produced'
+                               % self.current_iteration)
+            raise VardlNaNLossException
 
         self.optimizer.step()
 
@@ -130,16 +149,16 @@ class TrainerClassifier():
         if self.current_iteration % train_log_interval == 0:
             if train_verbose:
                 self._logger.debug('Train: iter=%5d  loss=%01.03e  dkl=%01.03e  error=%.2f ' %
-                                   (self.current_iteration, loss.item(), self.model.dkl.item(), error.item()))
+                                   (self.current_iteration, loss.item(), self.compute_kl(), error.item()))
 
-            #for name, param in self.model.named_parameters():
-            #    if param.requires_grad:
-            #        self.tb_logger.writer.add_histogram(name,
-            #                                         param.clone().cpu().data.numpy(),
-            #                                         self.current_iteration, )
-            #        self.tb_logger.writer.add_histogram(name + '.grad',
-            #                                         param.grad.clone().cpu().data.numpy(),
-            #                                         self.current_iteration, )
+                for name, param in self.model.named_parameters():
+                    if param.requires_grad:
+            #            self.tb_logger.writer.add_histogram(name,
+            #                                             param.clone().cpu().data.numpy(),
+            #                                             self.current_iteration, )
+                        self.tb_logger.writer.add_histogram(name + '.grad',
+                                                         param.grad.clone().cpu().data.numpy(),
+                                                         self.current_iteration, )
 
         self.tb_logger.scalar_summary('loss/train', loss, self.current_iteration)
         self.tb_logger.scalar_summary('loss/train/nll',
@@ -148,7 +167,7 @@ class TrainerClassifier():
                                                      len(self.train_dataloader.dataset),
                                                      data.size(0)), self.current_iteration)
         self.tb_logger.scalar_summary('error/train', error, self.current_iteration)
-        self.tb_logger.scalar_summary('model/dkl', self.model.dkl, self.current_iteration)
+        self.tb_logger.scalar_summary('model/dkl', self.compute_kl(), self.current_iteration)
 
         if self.is_prior_update:
             self._prior_update()

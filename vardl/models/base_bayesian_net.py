@@ -36,7 +36,7 @@ class BaseBayesianNet(nn.Module):
 
     @property
     def dkl(self):
-        total_dkl = torch.tensor(0.)
+        total_dkl = 0
         for layer in self.modules():
             total_dkl += layer.dkl if issubclass(type(layer), BaseBayesianLayer) else 0
         return total_dkl

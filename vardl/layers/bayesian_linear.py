@@ -62,7 +62,7 @@ class BayesianLinear(BaseBayesianLayer):
                                                         rank = self.rank)
 
     #    self.prior_W.logvars.data.fill_(np.log(0.05))
-        self.prior_W.logvars.data.fill_(np.log(.1))
+        self.prior_W.logvars.data.fill_(np.log(.01))
 
         self.q_posterior_W.optimize(True)
         #self.prior_W.logvars.requires_grad = True

@@ -45,27 +45,29 @@ def parse_args():
                         help='Verbosity of training steps')
     parser.add_argument('--nmc_train', type=int, default=1,
                         help='Number of Monte Carlo samples during training')
-    parser.add_argument('--nmc_test', type=int, default=128,
+    parser.add_argument('--nmc_test', type=int, default=16,
                         help='Number of Monte Carlo samples during testing')
     parser.add_argument('--batch_size', type=int, default=128,
                         help='Batch size during training')
-    parser.add_argument('--lr', type=float, default=5e-4,
+    parser.add_argument('--lr', type=float, default=1e-3,
                         help='Learning rate for training', )
     parser.add_argument('--model', choices=['iblm', 'mcd'], type=str, required=True,
                         help='Type of Bayesian model')
     parser.add_argument('--outdir', type=str,
                         default='workspace/',
                         help='Output directory base path',)
-    parser.add_argument('--seed', type=int, default=2018,
+    parser.add_argument('--seed', type=int, default=2019,
                         help='Random seed',)
-    parser.add_argument('--iterations', type=int, default=1000000,
+    parser.add_argument('--iterations', type=int, default=10000000,
                         help='Interval between testing')
     parser.add_argument('--test_interval', type=int, default=500,
                         help='Interval between testing')
     parser.add_argument('--device', type=str, default='cuda',
                         help='Interval between testing')
-    parser.add_argument('--time_budget', type=int, default=720,
+    parser.add_argument('--time_budget', type=int, default=240,
                         help='Time budget in minutes')
+    parser.add_argument('--initialized_model', type=str, default=None,
+                        help='Path to initialized model')
 
 
     args = parser.parse_args()
@@ -86,13 +88,13 @@ def setup_dataset():
     train_dataloader = DataLoader(train_dataset,
                                   batch_size=args.batch_size,
                                   shuffle=True,
-                                  num_workers=2,
+                                  num_workers=0,
                                   pin_memory=True)
 
     test_dataloader = DataLoader(test_dataset,
-                                 batch_size=8192,
+                                 batch_size=1024,
                                  shuffle=True,
-                                 num_workers=2,
+                                 num_workers=0,
                                  pin_memory=True)
 
     return train_dataloader, test_dataloader
@@ -133,9 +135,13 @@ if __name__ == '__main__':
 
     if args.model == 'mcd':
         model = vardl.mcd.VGG16MCD_CIFAR10(nmc_test=args.nmc_test)
+        optimizer_config = dict(lr=float(args.lr), weight_decay=0.05)
+        lr_decay_config = dict(gamma=0.0001, p=0.75)
     else:
         arch = vardl.architectures.build_vgg16_cifar10(**layer_config)
         model = vardl.models.ClassBayesianNet(architecure=(arch))
+        optimizer_config = dict(lr=float(args.lr))
+        lr_decay_config = dict(gamma=0.0001, p=0.75)
 
     tb_logger = vardl.logger.TensorboardLogger(path=outdir, model=model, directory=None)
     trainer = vardl.trainer.TrainerClassifier(model=model,
@@ -144,16 +150,17 @@ if __name__ == '__main__':
                                               #optimizer='SGD',
                                               #optimizer_config=dict(lr=float(lr), momentum=0.9),
                                               optimizer='Adam',
-                                              optimizer_config={'lr': float(args.lr)},
-                                              lr_decay_config=dict(gamma=0.0001, p=0),
+                                              optimizer_config=optimizer_config,
+                                              lr_decay_config=lr_decay_config,
                                               device=args.device,
                                               logger=tb_logger,
-                                              seed=args.seed)
+                                              seed=args.seed,
+                                              prior_update_interval=0)
 
 
     torch.backends.cudnn.benchmark = True
 
-    if model == 'iblm':
+    if args.model == 'iblm':
         init_dataloader = DataLoader(train_dataloader.dataset,
                                      batch_size=256,
                                      shuffle=True,
@@ -165,13 +172,19 @@ if __name__ == '__main__':
                                                        train_dataloader=init_dataloader,
                                                        device=args.device,
                                                        lognoise=lognoise)
-        initializer.initialize()
+        #initializer = vardl.initializer.XavierNormalInitializer(model)
+        if args.initialized_model is None:
+            initializer.initialize()
+            model.save_model('./workspace/trained_model/iblm.pth')
+        else:
+            model.load_model(args.initialized_model)
 
 
+    #trainer.debug = True
     trainer.fit(iterations=args.iterations,
                 test_interval=args.test_interval,
-                train_verbose=False,
-                train_log_interval=1000,
+                train_verbose=args.verbose,
+                train_log_interval=args.test_interval//10,
                 time_budget=args.time_budget)
 
     test_mnll, test_error = trainer.test()

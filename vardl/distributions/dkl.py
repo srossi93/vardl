@@ -70,7 +70,7 @@ def dkl_matrix_gaussian(q: MatrixGaussianDistribution,
 
 
 def _dkl_gaussian_q_diag_p_diag(mq: torch.Tensor,
-                                log_vq: torch.Tensor,
+                                log_vq: torch.nn.Parameter,
                                 mp: torch.Tensor,
                                 log_vp: torch.Tensor) -> torch.Tensor:
     """
@@ -80,7 +80,7 @@ def _dkl_gaussian_q_diag_p_diag(mq: torch.Tensor,
     ----------
     mq : torch.Tensor
         means of the approximate Gaussian
-    log_vq : torch.Tensor
+    log_vq : torch.nn.Parameter
         log variances of the approximate Gaussian
     mp : torch.Tensor
         means of the target Gaussian
@@ -93,8 +93,15 @@ def _dkl_gaussian_q_diag_p_diag(mq: torch.Tensor,
         KL divergence KL(q||p)
 
     """
-    return 0.5 * torch.sum(
-        log_vp - log_vq + (torch.pow(mq - mp, 2) * torch.exp(-log_vp)) + torch.exp(log_vq - log_vp) - 1.0)
+
+    kl = 0.5 * torch.sum(
+        log_vp - log_vq
+        + (torch.pow(mq - mp, 2) * torch.exp(-log_vp))
+        + torch.exp(log_vq - log_vp) - 1.0
+    )
+
+
+    return kl
 
 
 def _dkl_gaussian_q_full_p_diag(mq: torch.Tensor,

@@ -19,3 +19,6 @@ class VardlException(Exception):
 
 class VardlRunningTimeException(Exception):
     """Raised when running time elapsed"""
+
+class VardlNaNLossException(Exception):
+    """Raised when loss becomes nan"""
