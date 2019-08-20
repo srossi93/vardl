@@ -1,4 +1,3 @@
-
 #  Copyright (c) 2019
 #
 #  This program is free software: you can redistribute it and/or modify it
@@ -22,27 +21,48 @@
 
 import abc
 
+import torch
 import torch.nn as nn
 
 
 class BaseDistribution(nn.Module, metaclass=abc.ABCMeta):
-
+    """
+    Implements a metaclass for all distribution
+    """
     def __init__(self, *args, **kwargs):
+        """
+        Implements a metaclass for all distribution
+        """
         super(BaseDistribution, self).__init__()
         NotImplementedError("Subclass should implement this.")
 
     @abc.abstractmethod
     def sample(self, n_samples):
+        """
+        Abstract method for sampling from the distribution
+        """
         NotImplementedError("Subclass should implement this.")
 
     @abc.abstractmethod
     def sample_local_reparam_linear(self, *args, **kargs):
+        """
+        Abstract method for sampling from the distribution using
+        the local reparameterization trick of linear layers
+        """
         NotImplementedError("Subclass should implement this.")
 
     @abc.abstractmethod
     def sample_local_reparam_conv2d(self, *args, **kargs):
+        """
+        Abstract method for sampling from the distribution using
+        the local reparameterization trick of convolutional layers
+        """
         NotImplementedError("Subclass should implement this.")
 
     def optimize(self, train: bool = True):
+        """
+        Optimize or not the distribution
+        :param train: Flag
+        """
         for param in self.parameters():
             param.requires_grad = train

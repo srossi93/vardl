@@ -205,30 +205,6 @@ def _kl_fcmvg_ffmvg(q, p):
 
 @register_kl(FullCovarianceMatrixGaussian, FullyFactorizedMatrixGaussian)
 def _kl_fcmg_ffmg(q, p):
-    #mq: torch.Tensor,
-    #                            lower_triang_q: torch.Tensor,
-    #                            mp: torch.Tensor,
-    #                            log_vp: torch.Tensor) -> torch.Tensor:
-    """
-    Computes the KL divergence when p is factorized ad q is with full covariance matrix
-
-    Parameters
-    ----------
-    mq : torch.Tensor
-        means of the approximate Gaussian
-    lower_triang_q: torch.Tensor
-        lower_triangular decomposition of the approximate Gaussian covariance matrix
-    mp : torch.Tensor
-        means of the target Gaussian
-    log_vp : torch.Tensor
-        log variances of the target Gaussian
-
-    Returns
-    -------
-    torch.Tensor
-        KL divergence KL(q||p)
-
-    """
     def _single__dkl_gaussian_q_full_p_diag(mq, lower_triang_q, mp, log_vp):
         dimension = mq.size(0)
 
