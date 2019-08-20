@@ -14,6 +14,10 @@ workspace/
 # C extensions
 *.so
 
+vardl/architectures/
+vardl/experiment/
+vardl/mcd/
+
 # Distribution / packaging
 .Python
 build/
