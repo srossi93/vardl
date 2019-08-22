@@ -15,9 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#from .view import View
-#from .beta_dropout import BetaDropout
-
 
 from .base_variational_layer import BaseVariationalLayer
 from .variational_linear import VariationalLinear
