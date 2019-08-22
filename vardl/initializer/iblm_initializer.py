@@ -117,9 +117,9 @@ class IBLMInitializer(BaseInitializer):
                     labels = (mm[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
                     log_noise = (vv[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
 
-                    blm_W_m, blm_W_cov = bayesian_linear_model(patches, labels, log_noise)
+                    blm_W_m, blm_W_cov = bayesian_linear_model(patches, labels, log_noise, layer.prior_weights.logvars[0,0])
                 else:
-                    blm_W_m, blm_W_cov = bayesian_linear_model(X, mm[:, index],  vv[:, index])
+                    blm_W_m, blm_W_cov = bayesian_linear_model(X, mm[:, index],  vv[:, index], layer.prior_weights.logvars[0,0])
 
             else:
                 # Run a forward pass (the hook will save the input to the layer)
@@ -136,9 +136,9 @@ class IBLMInitializer(BaseInitializer):
                     labels = (mm[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
                     log_noise = (vv[:, index] * torch.ones(n_patches, 1, device=X.device)).view(-1)
 
-                    blm_W_m, blm_W_cov = bayesian_linear_model(patches, labels, log_noise)
+                    blm_W_m, blm_W_cov = bayesian_linear_model(patches, labels, log_noise, layer.prior_weights.logvars[0,0])
                 else:
-                    blm_W_m, blm_W_cov = bayesian_linear_model(new_in_data, mm[:, index], vv[:, index])
+                    blm_W_m, blm_W_cov = bayesian_linear_model(new_in_data, mm[:, index], vv[:, index], layer.prior_weights.logvars[0,0])
 
             if isinstance(layer.posterior_weights, FullyFactorizedMatrixGaussian):
                 blm_W_logv = (1. / torch.inverse(blm_W_cov).diag()).log()
@@ -158,9 +158,10 @@ class IBLMInitializer(BaseInitializer):
         hook_hadler.remove()
 
 
-def bayesian_linear_model(X: torch.Tensor, Y: torch.Tensor, log_noise: torch.Tensor) -> torch.Tensor:
+def bayesian_linear_model(X: torch.Tensor, Y: torch.Tensor, log_noise: torch.Tensor, prior_logvar) -> torch.Tensor:
 
     noise_var = torch.exp(log_noise)
+    prior_var = prior_logvar.exp()
 
     #print('X', X.size())
     #print('Y:', Y.size())
@@ -168,8 +169,8 @@ def bayesian_linear_model(X: torch.Tensor, Y: torch.Tensor, log_noise: torch.Ten
 
     identity = torch.eye(X.size(1), device=X.device)
 
-    W_true_post_cov = torch.inverse(
-        identity +
+    W_true_post_cov = prior_var * torch.inverse(
+        identity + prior_var *
         torch.matmul(
             X.transpose(-1, -2),
             torch.mul(

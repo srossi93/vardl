@@ -50,7 +50,7 @@ class MatrixGaussianDistribution(BaseDistribution, metaclass=abc.ABCMeta):
             requires_grad=False)  # type: torch.nn.Parameter
 
         self.logvars = nn.Parameter(
-            torch.ones(self.n, self.m, dtype=dtype) * np.log(2. / (self.n + self.m)),
+            torch.ones(self.n, self.m, dtype=dtype) * np.log(1. / (self.n)),
             requires_grad=False)
 
     @abc.abstractmethod

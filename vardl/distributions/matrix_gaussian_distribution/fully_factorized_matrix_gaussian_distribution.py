@@ -47,15 +47,17 @@ class FullyFactorizedMatrixGaussian(MatrixGaussianDistribution):
 
     def sample_local_reparam_linear(self, n_sample: int, in_data: torch.Tensor):
         # Retrieve current device (useful generate the data already in the correct device)
+        bs = in_data.shape[1]
         device = self.mean.device
-        epsilon_for_Y_sample = torch.randn(n_sample, in_data.size(-2), self.mean.size(1),
+        epsilon_for_Y_sample = torch.randn(n_sample, 1, self.mean.size(1),
+        # epsilon_for_Y_sample = torch.randn(n_sample, in_data.size(-2), self.mean.size(1),
                                            dtype=self.dtype,
                                            device=device,
                                            requires_grad=False)  # type: torch.Tensor
 
         mean_Y = torch.matmul(in_data, self.mean)
-        var_Y = torch.matmul(in_data.pow(2), torch.exp(self.logvars))
-        Y = mean_Y + torch.sqrt(var_Y + 1e-5) * epsilon_for_Y_sample  # type: torch.Tensor
+        var_Y = torch.matmul(in_data ** 2, torch.exp(self.logvars))
+        Y = mean_Y + torch.sqrt(var_Y) * epsilon_for_Y_sample  # type: torch.Tensor
         return Y
 
     def sample_local_reparam_conv2d(self, n_sample, in_data, out_channels, in_channels, in_height, in_width,

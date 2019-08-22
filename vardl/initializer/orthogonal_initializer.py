@@ -38,6 +38,6 @@ class OrthogonalInitializer(BaseInitializer):
         if isinstance(layer.posterior_weights, FullyFactorizedMatrixGaussian):
             torch.nn.init.orthogonal_(layer.posterior_weights.mean)
             var = 2. / layer.posterior_weights.n
-            layer.q_posterior_W.logvars.data.fill_(np.log(var))
+            layer.posterior_weights.logvars.data.fill_(np.log(var))
         else:
             logger.warning('Distribution not available yet for this type of initialization. Skipping')

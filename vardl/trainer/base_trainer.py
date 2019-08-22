@@ -43,6 +43,7 @@ import logging
 logger = logging.getLogger(__name__)
 available_optimizers = {'Adam': optim.Adam,
                         'SGD': optim.SGD,
+                        'RMSprop': optim.RMSprop,
                         'Adagrad': optim.Adagrad}
 
 class BaseTrainer(abc.ABC):
