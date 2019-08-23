@@ -36,19 +36,19 @@ class FullyFactorizedMatrixGaussian(MatrixGaussianDistribution):
         self.fixed_randomness = fixed_randomness
 
         if self.fixed_randomness:
-            self.epsilon_for_samples = torch.randn(1, self.n, dtype=self.dtype, device=self.mean.device,
+            self.epsilon_for_samples = torch.randn(1, self.n, self.m, dtype=self.dtype, device=self.mean.device,
                                                    requires_grad=False)
 
     def sample(self, n_samples: int):
         if not self.fixed_randomness:
-            self.epsilon_for_samples = torch.randn(n_samples, self.n,
+            self.epsilon_for_samples = torch.randn(n_samples, self.n, self.m,
                                                    dtype=self.dtype,
                                                    device=self.mean.device,
                                                    requires_grad=False)
 
-        samples = torch.add(torch.mul(self.epsilon_for_samples,
-                                      torch.exp(self.logvars / 2.0)),
-                            self.mean)  # type: torch.Tensor
+        samples = torch.add(torch.mul(self.epsilon_for_samples.to(self.mean.device),
+                                     torch.exp(self.logvars / 2.0)),
+                           self.mean)  # type: torch.Tensor
         return samples
 
     def sample_local_reparam_linear(self, n_sample: int, in_data: torch.Tensor):

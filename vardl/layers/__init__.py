@@ -21,6 +21,7 @@ from .variational_linear import VariationalLinear
 from .variational_conv2d import VariationalConv2d, compute_output_shape_conv2d
 from .variational_fastfood_linear import VariationalFastfoodLinear
 from .variational_fastfood_conv2d import VariationalFastfoodConv2d
+from .variational_gaussian_process_rff import VariationalGaussianProcessRFF
 
 # TENSOR EXPANSION OF PYTORCH MODULES
 from .tensor_conv import TensorConv2d

@@ -28,7 +28,7 @@ from . import BaseVariationalLayer
 
 from ..distributions import available_distributions, kl_divergence
 from ..distributions import FullyFactorizedMultivariateGaussian
-from ..distributions import FullyFactorizedMatrixGaussian
+from ..distributions import FullyFactorizedMatrixGaussian, FullCovarianceMatrixGaussian
 
 
 def check_type(arg, type):
@@ -46,7 +46,9 @@ def check_str_in_list(arg, list):
 
 
 class VariationalGaussianProcessRFF(BaseVariationalLayer):
-    def __init__(self, in_features, out_features, number_rffs, kernel, is_kernel_ard, learn_Omega, learn_theta, add_mean):
+    def __init__(self,
+                 in_features, out_features, number_rffs, kernel, is_kernel_ard, learn_Omega, learn_theta,
+                 add_mean=False):
         super(VariationalGaussianProcessRFF, self).__init__()
         self.in_features = check_type(in_features, int)
         self.out_features = check_type(out_features, int)
@@ -126,6 +128,8 @@ class VariationalGaussianProcessRFF(BaseVariationalLayer):
         self.prior_weights = FullyFactorizedMatrixGaussian(self.hidden_dimension, self.out_features)
         self.prior_weights.optimize(False)
         self.posterior_weights = FullyFactorizedMatrixGaussian(self.hidden_dimension, self.out_features)
+        # self.posterior_weights = FullCovarianceMatrixGaussian(self.hidden_dimension, self.out_features)
+        self.posterior_weights.logvars.fill_(-2)
         self.posterior_weights.optimize(True)
 
     def kl_divergence(self):
@@ -138,6 +142,7 @@ class VariationalGaussianProcessRFF(BaseVariationalLayer):
         return kl
 
     def forward(self, input: torch.Tensor):
+        # print(input.device)
         if input.dim() != 3:
             raise RuntimeError('Input shape has to be 3D (Monte Carlo samples x batch size x in_features) but is %dD' %
                                input.dim())
@@ -157,8 +162,7 @@ class VariationalGaussianProcessRFF(BaseVariationalLayer):
             Omega_sample = self.prior_Omega.sample(nmc)
         if self.learn_Omega == 'var_fixed':
             Omega_sample = self.posterior_Omega.sample(nmc)
-
-        Phi_preactivation = torch.matmul(input/log_theta_lenghtscale_sample.exp(), Omega_sample)
+        Phi_preactivation = torch.matmul(input/(log_theta_lenghtscale_sample.exp()), Omega_sample)
         if self.kernel == 'rbf':
             Phi_postactivation = torch.cat((Phi_preactivation.sin(), Phi_preactivation.cos()), 2) * torch.sqrt(
                 log_theta_sigma2_sample.exp() / self.number_rffs)
@@ -170,6 +174,8 @@ class VariationalGaussianProcessRFF(BaseVariationalLayer):
         if self.add_mean:
             Phi_postactivation = torch.cat((input, Phi_postactivation), 2)
 
+        # weight_samples = self.posterior_weights.sample(nmc)
+        # output = torch.matmul(Phi_postactivation, weight_samples)
         output = self.posterior_weights.sample_local_reparam_linear(nmc, Phi_postactivation)
 
         return output

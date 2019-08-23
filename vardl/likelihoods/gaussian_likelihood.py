@@ -49,8 +49,8 @@ class Gaussian(BaseLikelihood):
         return self.log_theta_noise_var
 
     def predict(self, latent_val: torch.Tensor, percentile: float = None):
-        mean = torch.mean(latent_val, dim=0).detach().numpy()  # type: np.ndarray
-        var = torch.var(latent_val, dim=0).detach().numpy() + self.log_noise_var.exp().detach().numpy()  # type: np.ndarray
+        mean = torch.mean(latent_val, dim=0).cpu().detach().numpy()  # type: np.ndarray
+        var = torch.var(latent_val, dim=0).cpu().detach().numpy() #+ self.log_noise_var.exp().detach().numpy()  # type: np.ndarray
         if percentile is None:
             return mean
         pred_lower = mean - 2 * np.sqrt(var) #np.percentile(latent_val.detach(), 100. - percentile * 100, axis=0)  # type: np.ndarray
