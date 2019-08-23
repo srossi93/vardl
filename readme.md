@@ -9,7 +9,7 @@ See the GNU General Public License for more details.
 ## Cite us
 Please, if you are using or intent to use part of this library, consider to cite our works.
 
-### Good Initialization of Variational Bayes for Deep Models
+### Good Initialization of Variational Bayes for Deep Models (Rossi et al., 2019)
 ```latex
 @InProceedings{Rossi2019a,
   title = 	 {{Good Initializations of Variational {B}ayes for Deep Models}},
@@ -28,12 +28,30 @@ Please, if you are using or intent to use part of this library, consider to cite
 }
 ```
 
-### Walsh-Hadamard Variational Inference for Bayesian Deep Learning
+### Walsh-Hadamard Variational Inference for Bayesian Deep Learning (Rossi et al., 2019)
 ```latex
 @InProceedings{Rossi2019b,
   title = 	 {{Walsh-Hadamard Variational Inference for Bayesian Deep Learning}},
   author = 	 {Rossi, Simone and Marmin, Sebastien and Filippone, Maurizio},
   booktitle = 	 {arXiv: 1905.11248},
   year = 	 {2019},
+}
+```
+### Random Feature Expansions for Deep Gaussian Processes (Cutajar et al., 2017)
+```latex
+@InProceedings{Cutajar2017a,
+  title = 	 {{Random Feature Expansions for Deep {G}aussian Processes}},
+  author = 	 {Kurt Cutajar and Edwin V. Bonilla and Pietro Michiardi and Maurizio Filippone},
+  booktitle = 	 {Proceedings of the 34th International Conference on Machine Learning},
+  pages = 	 {884--893},
+  year = 	 {2017},
+  editor = 	 {Doina Precup and Yee Whye Teh},
+  volume = 	 {70},
+  series = 	 {Proceedings of Machine Learning Research},
+  address = 	 {International Convention Centre, Sydney, Australia},
+  month = 	 {06--11 Aug},
+  publisher = 	 {PMLR},
+  pdf = 	 {http://proceedings.mlr.press/v70/cutajar17a/cutajar17a.pdf},
+  url = 	 {http://proceedings.mlr.press/v70/cutajar17a.html},
 }
 ```
