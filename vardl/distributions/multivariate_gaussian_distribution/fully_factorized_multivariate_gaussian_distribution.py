@@ -28,20 +28,25 @@ logger = logging.getLogger(__name__)
 
 
 class FullyFactorizedMultivariateGaussian(MultivariateGaussianDistribution):
-    def __init__(self, n: int, dtype: torch.dtype = torch.float32):
+    def __init__(self, n: int, dtype: torch.dtype = torch.float32, fixed_randomness=False):
         super(FullyFactorizedMultivariateGaussian, self).__init__(n,  dtype=dtype)
         self.name = 'Fully factorized matrix Gaussian'
         self.has_local_reparam_linear = False
         self.has_local_reparam_conv2d = False
+        self.fixed_randomness = fixed_randomness
+
+        if self.fixed_randomness:
+            self.epsilon_for_samples = torch.randn(1, self.n, dtype=self.dtype, device=self.mean.device,
+                                                   requires_grad=False)
 
     def sample(self, n_samples: int):
-
-        epsilon_for_samples = torch.randn(n_samples, self.n,
+        if not self.fixed_randomness:
+            self.epsilon_for_samples = torch.randn(n_samples, self.n,
                                           dtype=self.dtype,
                                           device=self.mean.device,
                                           requires_grad=False)
 
-        samples = torch.add(torch.mul(epsilon_for_samples,
+        samples = torch.add(torch.mul(self.epsilon_for_samples,
                                       torch.exp(self.logvars / 2.0)),
                             self.mean)  # type: torch.Tensor
         return samples
