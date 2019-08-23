@@ -66,7 +66,7 @@ class VariationalGaussianProcessRFF(BaseVariationalLayer):
                     requires_grad=True)  # Initialize lengthscale to sqrt(D) / 2
             if not self.is_kernel_ard:
                 self.log_theta_lengthscale = torch.nn.Parameter(
-                    torch.tensor(0.5 * np.log(self.in_features * 1.0) - np.log(2.0)),
+                    torch.tensor(0.5 * np.log(self.in_features * 1.0) - np.log(2.)),
                     requires_grad=True)  # Initialize lengthscale to sqrt(D) / 2
 
         if self.learn_theta == "var":
